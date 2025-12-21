@@ -1,0 +1,67 @@
+<!-- FILE: src/views/layout.ejs -->
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>
+    <%= title || 'Changkhum Ledger' %>
+  </title>
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+
+<body>
+  <% if (locals.isAuth) { %>
+    <div class="app-container">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h1>XANGKHAM Ledger</h1>
+          <p>ระบบบัญชีหวย</p>
+        </div>
+        <nav class="sidebar-nav">
+          <a href="/dashboard">หน้าแรก</a>
+          <a href="/periods">จัดการงวด</a>
+          <a href="/reports/monthly">รายงานรายเดือน</a>
+          <a href="/audit/logs">Audit Log</a>
+          <a href="/logout">ออกจากระบบ</a>
+        </nav>
+      </aside>
+
+      <div class="main-content">
+        <header class="header">
+          <h2>
+            <%= title || 'Dashboard' %>
+          </h2>
+          <div class="header-actions">
+            <div class="user-info">
+              <div class="user-avatar">
+                <%= user.fullName.charAt(0).toUpperCase() %>
+              </div>
+              <div class="user-details">
+                <strong>
+                  <%= user.fullName %>
+                </strong>
+                <span>
+                  <%= user.role %>
+                </span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main class="content">
+          <%- body %>
+        </main>
+      </div>
+    </div>
+    <% } else { %>
+      <%- body %>
+        <% } %>
+
+          <script src="/js/ui.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,130 @@
+<!-- FILE: src/views/reports/monthly.ejs -->
+<div class="report-header">
+    <div class="report-period">รายงานรายเดือน</div>
+    <% if (year && month) { %>
+        <div class="report-date">เดือน <%= month %> / ปี <%= year %>
+        </div>
+        <% } %>
+</div>
+
+<!-- Filter Form -->
+<div class="card">
+    <div class="card-header">
+        <h3>เลือกเดือน/ปี</h3>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="/reports/monthly" class="flex gap-20">
+            <div class="form-group">
+                <label>ปี</label>
+                <input type="number" name="year" class="form-control" value="<%= year || 2025 %>" required>
+            </div>
+            <div class="form-group">
+                <label>เดือน</label>
+                <select name="month" class="form-control" required>
+                    <% for(let m=1; m <=12; m++) { %>
+                        <option value="<%= m %>" <%=month==m ? 'selected' : '' %>><%= m %>
+                        </option>
+                        <% } %>
+                </select>
+            </div>
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+                <button type="submit" class="btn btn-primary">ดูรายงาน</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<% if (year && month && periods.length> 0) { %>
+    <!-- Summary -->
+    <div class="card mt-20">
+        <div class="card-header">
+            <h3>สรุปรายเดือน</h3>
+        </div>
+        <div class="card-body">
+            <div class="stats-grid">
+                <div class="stat-card lak">
+                    <h4>รวมยอดขาย LAK</h4>
+                    <div class="value">
+                        <%= money.format(totals.salesLak) %>
+                    </div>
+                </div>
+                <div class="stat-card thb">
+                    <h4>รวมยอดขาย THB</h4>
+                    <div class="value">
+                        <%= money.format(totals.salesThb) %>
+                    </div>
+                </div>
+                <div class="stat-card lak">
+                    <h4>รวมค่าใช้จ่าย LAK</h4>
+                    <div class="value">
+                        <%= money.format(totals.expensesLak) %>
+                    </div>
+                </div>
+                <div class="stat-card thb">
+                    <h4>รวมค่าใช้จ่าย THB</h4>
+                    <div class="value">
+                        <%= money.format(totals.expensesThb) %>
+                    </div>
+                </div>
+                <div class="stat-card lak">
+                    <h4>กำไรสุทธิ LAK</h4>
+                    <div class="value">
+                        <%= money.format(totals.netLak) %>
+                    </div>
+                </div>
+                <div class="stat-card thb">
+                    <h4>กำไรสุทธิ THB</h4>
+                    <div class="value">
+                        <%= money.format(totals.netThb) %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Period List -->
+    <div class="card mt-20">
+        <div class="card-header">
+            <h3>งวดในเดือนนี้</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>วันที่</th>
+                            <th>สถานะ</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% periods.forEach(period=> { %>
+                            <tr>
+                                <td>
+                                    <%= new Date(period.period_date).toLocaleDateString('th-TH', { year: 'numeric' ,
+                                        month: 'long' , day: 'numeric' }) %>
+                                </td>
+                                <td>
+                                    <span
+                                        class="status-badge <%= period.status === 'LOCKED' ? 'status-locked' : 'status-open' %>">
+                                        <%= period.status %>
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="/periods/<%= period.id %>" class="btn btn-secondary">ดูรายละเอียด</a>
+                                    <a href="/reports/period/<%= period.id %>" class="btn btn-primary">รายงาน</a>
+                                </td>
+                            </tr>
+                            <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-20">
+        <button class="btn btn-primary" onclick="window.print()">🖨️ พิมพ์รายงาน</button>
+    </div>
+    <% } else if (year && month) { %>
+        <div class="alert alert-warning mt-20">ไม่พบข้อมูลในเดือน/ปีที่เลือก</div>
+        <% } %>

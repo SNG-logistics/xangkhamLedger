@@ -1,0 +1,253 @@
+<!-- FILE: src/views/periods/detail.ejs -->
+<% if (period.status==='LOCKED' ) { %>
+    <div class="alert alert-danger">
+        <strong>งวดนี้ถูก LOCK แล้ว!</strong> ไม่สามารถแก้ไขข้อมูลได้ กรุณา UNLOCK ก่อน
+    </div>
+    <% } %>
+
+        <div class="period-detail-header <%= period.status === 'LOCKED' ? 'locked' : '' %>">
+            <div class="flex-between">
+                <div>
+                    <h2>งวดวันที่ <%= new Date(period.period_date).toLocaleDateString('th-TH', { year: 'numeric' ,
+                            month: 'long' , day: 'numeric' }) %>
+                    </h2>
+                    <p>ปี <%= period.period_year %> / เดือน <%= period.period_month %> | ปิดยอดขายงวด 20.00.00 | เวลาออก
+                                20:25:00
+                    </p>
+                </div>
+                <div>
+                    <span class="status-badge <%= period.status === 'LOCKED' ? 'status-locked' : 'status-open' %>">
+                        <%= period.status %>
+                    </span>
+                </div>
+            </div>
+
+            <% const total_prizes=(parseFloat(summary.prize_6_digit) || 0) + (parseFloat(summary.prize_5_digit) || 0) +
+                (parseFloat(summary.prize_4_digit) || 0) + (parseFloat(summary.prize_3_digit) || 0) +
+                (parseFloat(summary.prize_2_digit) || 0) + (parseFloat(summary.prize_1_digit) || 0); const
+                gross_sales=(parseFloat(summary.sales_6_digit) || 0) + (parseFloat(summary.sales_5_digit) || 0) +
+                (parseFloat(summary.sales_4_digit) || 0) + (parseFloat(summary.sales_3_digit) || 0) +
+                (parseFloat(summary.sales_2_digit) || 0) + (parseFloat(summary.sales_1_digit) || 0); const
+                net_profit=gross_sales - total_prizes - (parseFloat(expenseTotal.total_lak) || 0); %>
+                <div class="period-info-grid">
+                    <div class="period-info-item">
+                        <h4>ยอดขาย LAK (Gross)</h4>
+                        <p class="money lak">
+                            <%= money.format(gross_sales) %>
+                        </p>
+                    </div>
+                    <div class="period-info-item">
+                        <h4>ยอดถูกรางวัล (Prizes)</h4>
+                        <p class="money thb" style="color: #d35400;">
+                            <%= money.format(total_prizes) %>
+                        </p>
+                    </div>
+                    <div class="period-info-item">
+                        <h4>ค่าใช้จ่าย LAK</h4>
+                        <p class="money lak">
+                            <%= money.format(expenseTotal.total_lak || 0) %>
+                        </p>
+                    </div>
+                    <div class="period-info-item">
+                        <h4>ค่าใช้จ่าย THB</h4>
+                        <p class="money thb">
+                            <%= money.format(expenseTotal.total_thb || 0) %>
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    style="margin-top: 20px; padding: 15px; background: #eafaf1; border-radius: 8px; border-left: 5px solid #2ecc71; text-align: left;">
+                    <h4 style="margin: 0; color: #27ae60; font-size: 1rem;">กำไรสุทธิ (Profit)</h4>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #2ecc71; margin: 5px 0;">
+                        <%= money.format(net_profit) %>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #27ae60; opacity: 0.8;">(Net Sales - Expenses)</div>
+                </div>
+
+                <div class="mt-20 flex gap-10">
+                    <% if (period.status==='OPEN' ) { %>
+                        <button class="btn btn-danger" onclick="lockPeriod(<%= period.id %>)">🔒 LOCK งวด</button>
+                        <% } else { %>
+                            <button class="btn btn-warning" onclick="unlockPeriod(<%= period.id %>)">🔓 UNLOCK
+                                งวด</button>
+                            <% } %>
+                                <a href="/reports/period/<%= period.id %>" class="btn btn-primary">📊 รายงานงวดนี้</a>
+                </div>
+        </div>
+
+        <!-- Sales Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h3>ยอดขาย</h3>
+            </div>
+            <div class="card-body">
+                <% if (period.status==='OPEN' ) { %>
+                    <a href="/summaries/<%= period.id %>" class="btn btn-primary">บันทึกยอดขาย</a>
+                    <% } else { %>
+                        <p><strong>ยอดขาย LAK (Gross):</strong>
+                            <%= money.format(gross_sales) %>
+                        </p>
+                        <p style="color: #d35400;"><strong>ยอดถูกรางวัล (Prizes):</strong>
+                            <%= money.format(total_prizes) %>
+                        </p>
+                        <% if (summary.notes) { %>
+                            <p><strong>หมายเหตุ:</strong>
+                                <%= summary.notes %>
+                            </p>
+                            <% } %>
+                                <% } %>
+            </div>
+        </div>
+
+        <!-- Expenses -->
+        <div class="card mt-20">
+            <div class="card-header">
+                <div class="flex-between">
+                    <h3>ค่าใช้จ่าย</h3>
+                    <% if (period.status==='OPEN' ) { %>
+                        <button class="btn btn-primary" onclick="showModal('addExpenseModal')">+
+                            เพิ่มค่าใช้จ่าย</button>
+                        <% } %>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>เวลาเกิด</th>
+                                <th>ประเภท</th>
+                                <th>รายละเอียด</th>
+                                <th>LAK</th>
+                                <th>THB</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% expenses.forEach(exp=> { %>
+                                <tr>
+                                    <td>
+                                        <%= exp.occurred_at %>
+                                    </td>
+                                    <td>
+                                        <%= exp.category %>
+                                    </td>
+                                    <td>
+                                        <%= exp.description %>
+                                    </td>
+                                    <td class="money lak">
+                                        <%= money.format(exp.amount_lak) %>
+                                    </td>
+                                    <td class="money thb">
+                                        <%= money.format(exp.amount_thb) %>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-20">
+                    <strong>รวม LAK:</strong> <span class="money lak">
+                        <%= money.format(expenseTotal.total_lak) %>
+                    </span> |
+                    <strong>รวม THB:</strong> <span class="money thb">
+                        <%= money.format(expenseTotal.total_thb) %>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bank Balances -->
+        <div class="card mt-20">
+            <div class="card-header">
+                <div class="flex-between">
+                    <h3>ยอดเงินธนาคาร</h3>
+                    <% if (period.status==='OPEN' ) { %>
+                        <a href="/banks/<%= period.id %>" class="btn btn-primary">จัดการยอดเงิน</a>
+                        <% } %>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ธนาคาร</th>
+                                <th>เลขบัญชี</th>
+                                <th>ยอด LAK</th>
+                                <th>ยอด THB</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% banks.forEach(bank=> { %>
+                                <tr>
+                                    <td>
+                                        <%= bank.bank_name %>
+                                    </td>
+                                    <td>
+                                        <%= bank.bank_account || '-' %>
+                                    </td>
+                                    <td class="money lak">
+                                        <%= money.format(bank.balance_lak) %>
+                                    </td>
+                                    <td class="money thb">
+                                        <%= money.format(bank.balance_thb) %>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-20">
+                    <strong>รวม LAK:</strong> <span class="money lak">
+                        <%= money.format(bankTotal.total_lak) %>
+                    </span> |
+                    <strong>รวม THB:</strong> <span class="money thb">
+                        <%= money.format(bankTotal.total_thb) %>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Expense Modal -->
+        <div id="addExpenseModal" class="modal-overlay">
+            <div class="modal-box">
+                <h3>เพิ่มค่าใช้จ่าย</h3>
+                <form method="POST" action="/expenses/create" enctype="multipart/form-data">
+                    <input type="hidden" name="period_id" value="<%= period.id %>">
+
+                    <div class="form-group">
+                        <label>เวลาเกิดจริง</label>
+                        <input type="datetime-local" name="occurred_at" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>ประเภท</label>
+                        <input type="text" name="category" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>รายละเอียด</label>
+                        <textarea name="description" class="form-control"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>จำนวน LAK</label>
+                        <input type="number" step="0.01" name="amount_lak" class="form-control" data-money>
+                    </div>
+
+                    <div class="form-group">
+                        <label>จำนวน THB</label>
+                        <input type="number" step="0.01" name="amount_thb" class="form-control" data-money>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary"
+                            onclick="hideModal('addExpenseModal')">ยกเลิก</button>
+                        <button type="submit" class="btn btn-primary">บันทึก</button>
+                    </div>
+                </form>
+            </div>
+        </div>
