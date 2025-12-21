@@ -3,21 +3,33 @@
 คู่มือนี้จะแนะนำขั้นตอนการนำระบบ **XANGKHAM Ledger** ขึ้นใช้งานจริงบน HostAtom (หรือ Hosting อื่นๆ ที่ใช้ DirectAdmin / Plesk ที่รองรับ Node.js)
 
 ## สิ่งที่ต้องเตรียม
-1. ไฟล์โปรเจค (Zip file)
+1. ไฟล์โปรเจค (Zip file) หรือ Git Repository
 2. ข้อมูล Database
 3. การตั้งค่าบน Hosting
 
 ---
 
+## ขั้นตอนที่ 0: ตั้งค่า Domain Nameserver (สำหรับ xangkhamledger.com)
+
+ก่อนเริ่มใช้งาน ให้ตั้งค่า Nameserver ของโดเมน `xangkhamledger.com` ให้ชี้มาที่ HostAtom ตามค่าที่ได้รับมาครับ:
+
+1. ไปที่ผู้ให้บริการจดโดเมนของคุณ
+2. แก้ไข **Nameservers** เป็น:
+   - **NS1:** `sg5.hostatom.com` (IP: `15.235.154.180`)
+   - **NS2:** `sg6.hostatom.com` (IP: `203.170.129.24`)
+3. รอให้ DNS อัปเดต (อาจใช้เวลา 1-24 ชม.)
+
+---
+
 ## ขั้นตอนที่ 1: เตรียมไฟล์สำหรับอัปโหลด
 
+**(ทางเลือกที่ 1) อัปโหลดไฟล์ Zip:**
 1. ให้ทำการ **Zip** โฟลเดอร์โปรเจคทั้งหมด **ยกเว้น** โฟลเดอร์ `node_modules`
-   - สาเหตุ: เราจะไปกด install บน server แทน เพื่อให้ได้ library ที่ตรงกับระบบปฏิบัติการของ server
-2. ตรวจสอบว่ามีไฟล์สำคัญครบถ้วน:
-   - `package.json`
-   - `src/` (โฟลเดอร์โค้ดทั้งหมด)
-   - `sql/` (โฟลเดอร์ database script)
-   - `.env.example` (สำหรับดูเป็นตัวอย่าง)
+2. ตรวจสอบว่ามีไฟล์สำคัญครบถ้วน (`package.json`, `src/`, `.env.example`)
+
+**(ทางเลือกที่ 2) ใช้ Git (ถ้ามี SSH):**
+- ใช้คำสั่ง: `git clone https://github.com/SNG-logistics/xangkhamLedger.git`
+- หรือใช้เมนู **Git** ใน DirectAdmin แล้วใส่ URL นี้
 
 ---
 
@@ -43,8 +55,8 @@
 3. ตั้งค่าดังนี้:
    - **Node.js Version**: เลือกเวอร์ชันที่ใหม่ที่สุด (แนะนำ 18.x หรือ 20.x)
    - **Application Mode**: `Production`
-   - **Application Root**: ระบุโฟลเดอร์ที่จะวางไฟล์ (เช่น `ledger_app`)
-   - **Application URL**: เลือกโดเมนที่ต้องการใช้งาน (เช่น `ledger.yourdomain.com`)
+   - **Application Root**: ระบุโฟลเดอร์ที่จะวางไฟล์ (เช่น `xangkham_ledger`)
+   - **Application URL**: เลือกโดเมน `xangkhamledger.com`
    - **Application Startup File**: พิมพ์ `src/server.js` **(สำคัญมาก! ต้องระบุ path ให้ถูก)**
 4. กดปุ่ม **Create**
 5. ระบบจะสร้างโฟลเดอร์ตามที่ระบุใน Application Root
