@@ -58,7 +58,7 @@ const summaryController = {
 
                 for (const file of attachments) {
                     const filename = Date.now() + '-' + file.name;
-                    const uploadPath = path.join(__dirname, '../../public/uploads', filename);
+                    const uploadPath = path.join(__dirname, '../public/uploads', filename);
                     await file.mv(uploadPath);
                     filePaths.push(filename);
                 }

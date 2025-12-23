@@ -78,6 +78,7 @@ app.use('/audit', auditRoutes);
 
 // Dashboard
 const Period = require('./models/period.model');
+const money = require('./utils/money');
 app.get('/dashboard', auth.requireAuth, async (req, res) => {
     try {
         const periods = await Period.findAll();
@@ -93,7 +94,8 @@ app.get('/dashboard', auth.requireAuth, async (req, res) => {
         res.render('dashboard', {
             title: 'Dashboard',
             stats,
-            recentPeriods
+            recentPeriods,
+            money
         });
     } catch (error) {
         console.error(error);

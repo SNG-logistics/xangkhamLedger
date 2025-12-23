@@ -33,6 +33,9 @@ const periodController = {
             const journals = await Journal.findByPeriod(periodId);
 
             const expenseTotal = await Expense.getTotalByPeriod(periodId);
+
+
+
             const bankTotal = await Bank.getTotalByPeriod(periodId);
 
             res.render('periods/detail', {
@@ -167,6 +170,39 @@ const periodController = {
         } catch (error) {
             console.error(error);
             res.status(500).send('Error creating period');
+        }
+    },
+
+    delete: async (req, res) => {
+        try {
+            const periodId = req.params.id;
+
+            const period = await Period.findById(periodId);
+            if (!period) {
+                return res.status(404).json({ error: 'Period not found' });
+            }
+
+            // Optional: Check if period is empty or allow full cascade delete?
+            // User request implies force delete.
+
+            await Period.delete(periodId);
+
+            await audit.log(
+                req.session.userId,
+                'DELETE_PERIOD',
+                'periods',
+                periodId,
+                { period_date: period.period_date },
+                null,
+                'Manual deletion',
+                req.ip,
+                req.get('User-Agent')
+            );
+
+            res.json({ success: true });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Error deleting period' });
         }
     }
 };

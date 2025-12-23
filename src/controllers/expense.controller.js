@@ -22,7 +22,11 @@ const expenseController = {
 
     create: async (req, res) => {
         try {
-            const { period_id, occurred_at, category, description, amount_lak, amount_thb } = req.body;
+            let { period_id, occurred_at, category, description, amount_lak, amount_thb, custom_category } = req.body;
+
+            if (category === 'อื่นๆ' && custom_category) {
+                category = custom_category;
+            }
 
             // Calculate accounting_period_id automatically
             const accountingPeriodId = await timeRule.calculateAccountingPeriod(occurred_at, db);
@@ -34,7 +38,7 @@ const expenseController = {
 
                 for (const file of attachments) {
                     const filename = Date.now() + '-' + file.name;
-                    const uploadPath = path.join(__dirname, '../../public/uploads', filename);
+                    const uploadPath = path.join(__dirname, '../public/uploads', filename);
                     await file.mv(uploadPath);
                     filePaths.push(filename);
                 }

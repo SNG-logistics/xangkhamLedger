@@ -9,5 +9,6 @@ router.get('/:id', auth.requireAuth, periodController.detail);
 router.post('/create', auth.requireSuperAdmin, periodController.create);
 router.post('/:id/lock', auth.requireSuperAdmin, periodController.lock);
 router.post('/:id/unlock', auth.requireSuperAdmin, periodController.unlock);
+router.delete('/:id', auth.requireSuperAdmin, periodController.delete);
 
 module.exports = router;

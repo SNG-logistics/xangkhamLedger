@@ -48,10 +48,10 @@
                         <%= money.format(totals.salesLak) %>
                     </div>
                 </div>
-                <div class="stat-card thb">
-                    <h4>รวมยอดขาย THB</h4>
-                    <div class="value">
-                        <%= money.format(totals.salesThb) %>
+                <div class="stat-card lak">
+                    <h4>รวมยอดถูกรางวัล LAK</h4>
+                    <div class="value" style="color: #d35400;">
+                        - <%= money.format(totals.prizesLak) %>
                     </div>
                 </div>
                 <div class="stat-card lak">
@@ -60,22 +60,10 @@
                         <%= money.format(totals.expensesLak) %>
                     </div>
                 </div>
-                <div class="stat-card thb">
-                    <h4>รวมค่าใช้จ่าย THB</h4>
-                    <div class="value">
-                        <%= money.format(totals.expensesThb) %>
-                    </div>
-                </div>
                 <div class="stat-card lak">
                     <h4>กำไรสุทธิ LAK</h4>
                     <div class="value">
                         <%= money.format(totals.netLak) %>
-                    </div>
-                </div>
-                <div class="stat-card thb">
-                    <h4>กำไรสุทธิ THB</h4>
-                    <div class="value">
-                        <%= money.format(totals.netThb) %>
                     </div>
                 </div>
             </div>
@@ -93,6 +81,7 @@
                     <thead>
                         <tr>
                             <th>วันที่</th>
+                            <th>ยอดสรุป</th>
                             <th>สถานะ</th>
                             <th>Actions</th>
                         </tr>
@@ -103,6 +92,15 @@
                                 <td>
                                     <%= new Date(period.period_date).toLocaleDateString('th-TH', { year: 'numeric' ,
                                         month: 'long' , day: 'numeric' }) %>
+                                </td>
+                                <td>
+                                    <% const net_profit=(parseFloat(period.gross_sales) || 0) -
+                                        (parseFloat(period.total_prizes) || 0) - (parseFloat(period.total_expenses) ||
+                                        0); %>
+                                        <span
+                                            style="font-weight: bold; color: <%= net_profit >= 0 ? '#2ecc71' : '#e74c3c' %>">
+                                            <%= money.format(net_profit) %>
+                                        </span>
                                 </td>
                                 <td>
                                     <span

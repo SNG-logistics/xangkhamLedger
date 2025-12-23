@@ -13,6 +13,7 @@
                     <th>ปี</th>
                     <th>เดือน</th>
                     <th>เวลาออก</th>
+                    <th>ยอดสรุป</th>
                     <th>สถานะ</th>
                     <th>LOCK โดย</th>
                     <th>Actions</th>
@@ -35,6 +36,13 @@
                             <%= period.draw_time %>
                         </td>
                         <td>
+                            <% const net_profit=(parseFloat(period.gross_sales) || 0) - (parseFloat(period.total_prizes)
+                                || 0) - (parseFloat(period.total_expenses) || 0); %>
+                                <span style="font-weight: bold; color: <%= net_profit >= 0 ? '#2ecc71' : '#e74c3c' %>">
+                                    <%= money.format(net_profit) %>
+                                </span>
+                        </td>
+                        <td>
                             <span
                                 class="status-badge <%= period.status === 'LOCKED' ? 'status-locked' : 'status-open' %>">
                                 <%= period.status %>
@@ -45,6 +53,11 @@
                         </td>
                         <td>
                             <a href="/periods/<%= period.id %>" class="btn btn-secondary">ดูรายละเอียด</a>
+                            <button class="btn-icon delete" onclick="deletePeriod('<%= period.id %>')" title="ลบงวด"
+                                style="margin-left: 5px; background: none; border: none; cursor: pointer;">
+                                🗑️
+                            </button>
+
                         </td>
                     </tr>
                     <% }) %>

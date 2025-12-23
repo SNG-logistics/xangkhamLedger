@@ -37,6 +37,7 @@
                     <tr>
                         <th>วันที่งวด</th>
                         <th>ปี/เดือน</th>
+                        <th>ยอดสรุป</th>
                         <th>สถานะ</th>
                         <th>Actions</th>
                     </tr>
@@ -50,6 +51,15 @@
                             </td>
                             <td>
                                 <%= period.period_year %>/<%= period.period_month %>
+                            </td>
+                            <td>
+                                <% const net_profit=(parseFloat(period.gross_sales) || 0) -
+                                    (parseFloat(period.total_prizes) || 0) - (parseFloat(period.total_expenses) || 0);
+                                    %>
+                                    <span
+                                        style="font-weight: bold; color: <%= net_profit >= 0 ? '#2ecc71' : '#e74c3c' %>">
+                                        <%= money.format(net_profit) %>
+                                    </span>
                             </td>
                             <td>
                                 <span

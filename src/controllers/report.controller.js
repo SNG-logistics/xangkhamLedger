@@ -43,27 +43,38 @@ const reportController = {
             const periods = await Period.findByYearMonth(parseInt(year), parseInt(month));
 
             let totalSalesLak = 0, totalSalesThb = 0;
+            let totalPrizesLak = 0; // Add prizes tracking
             let totalExpensesLak = 0, totalExpensesThb = 0;
 
             for (const period of periods) {
+                // Use aggregated data directly from Period model to ensure consistency
+                const grossSales = parseFloat(period.gross_sales) || 0;
+                const totalPrizes = parseFloat(period.total_prizes) || 0;
+                const totalExpenses = parseFloat(period.total_expenses) || 0;
+
+                totalSalesLak += grossSales;
+                totalPrizesLak += totalPrizes;
+                totalExpensesLak += totalExpenses;
+
+                // Fetch secondary data for THB if needed (as currently not aggregated in Period model)
                 const summary = await Summary.findByPeriod(period.id);
                 const expenseTotal = await Expense.getTotalByPeriod(period.id);
 
                 if (summary) {
-                    totalSalesLak += parseFloat(summary.sales_lak || 0);
                     totalSalesThb += parseFloat(summary.sales_thb || 0);
                 }
 
-                totalExpensesLak += parseFloat(expenseTotal.total_lak || 0);
                 totalExpensesThb += parseFloat(expenseTotal.total_thb || 0);
             }
 
             const totals = {
                 salesLak: totalSalesLak,
                 salesThb: totalSalesThb,
+                prizesLak: totalPrizesLak, // Add to totals
                 expensesLak: totalExpensesLak,
                 expensesThb: totalExpensesThb,
-                netLak: totalSalesLak - totalExpensesLak,
+                // Net Profit = Sales - Prizes - Expenses
+                netLak: totalSalesLak - totalPrizesLak - totalExpensesLak,
                 netThb: totalSalesThb - totalExpensesThb
             };
 

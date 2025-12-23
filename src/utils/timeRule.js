@@ -5,34 +5,27 @@ const timeRule = {
     // คำนวณ accounting_period_id จาก occurred_at
     calculateAccountingPeriod: async (occurredAt, db) => {
         // occurred_at = เวลาที่ค่าใช้จ่ายเกิดขึ้นจริง
-        // ค้นหางวดที่ใกล้ที่สุดที่มี period_date + 20:00 <= occurred_at
+        // ค้นหางวดที่ (Closing Time >= Expense Time)
+        // เรียงตามวันที่น้อยไปมาก (หา Deadline ที่ใกล้ที่สุดที่ยังมาไม่ถึง หรือเพิ่งผ่านไป)
 
         const [periods] = await db.query(`
       SELECT id, period_date
       FROM periods
-      WHERE TIMESTAMP(period_date, '20:00:00') <= ?
-      ORDER BY period_date DESC
+      WHERE TIMESTAMP(period_date, '20:00:00') >= ?
+      ORDER BY period_date ASC
       LIMIT 1
     `, [occurredAt]);
 
         if (periods.length === 0) {
-            // ถ้าไม่เจองวดก่อนหน้า ให้ใช้งวดแรกสุด
-            const [firstPeriod] = await db.query(`
-        SELECT id FROM periods ORDER BY period_date ASC LIMIT 1
+            // ถ้าไม่เจองวดในอนาคตเลย (แปลว่าเป็นรายการที่เกิดขึ้นหลังงวดสุดท้ายที่มีในระบบ)
+            // ให้ Map เข้ากับงวดล่าสุด
+            const [lastPeriod] = await db.query(`
+        SELECT id FROM periods ORDER BY period_date DESC LIMIT 1
       `);
-            return firstPeriod.length > 0 ? firstPeriod[0].id : null;
+            return lastPeriod.length > 0 ? lastPeriod[0].id : null;
         }
 
-        // ค่าใช้จ่ายนี้จะถูกนับในงวดถัดไป
-        const [nextPeriod] = await db.query(`
-      SELECT id
-      FROM periods
-      WHERE period_date > ?
-      ORDER BY period_date ASC
-      LIMIT 1
-    `, [periods[0].period_date]);
-
-        return nextPeriod.length > 0 ? nextPeriod[0].id : periods[0].id;
+        return periods[0].id;
     },
 
     formatDateTime: (date) => {

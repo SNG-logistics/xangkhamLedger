@@ -1,0 +1,168 @@
+@media print {
+
+    /* Hide UI Elements */
+    .sidebar,
+    .header,
+    .btn,
+    .btn-icon,
+    .alert,
+    .no-print,
+    .mt-20.flex.gap-10 {
+        display: none !important;
+    }
+
+    .print-only {
+        display: block !important;
+    }
+
+    /* Reset Layout for Print */
+    body {
+        margin: 0;
+        padding: 0;
+        background: white;
+        font-size: 11pt;
+        color: #2c3e50;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .app-container {
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        display: block !important;
+    }
+
+    .content {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Report Specific Styles */
+    .report-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #34495e;
+        box-shadow: none !important;
+    }
+
+    .report-period {
+        font-size: 24pt;
+        font-weight: bold;
+        color: #2c3e50;
+        margin: 0;
+    }
+
+    .report-date {
+        font-size: 14pt;
+        color: #7f8c8d;
+    }
+
+    /* Dashboard Summary as Table-like Grid */
+    .dashboard-stats {
+        /* If original used flex/grid */
+        display: flex !important;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 30px;
+        page-break-inside: avoid;
+    }
+
+    /* Flatten Cards */
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        border-radius: 8px !important;
+        margin-bottom: 20px !important;
+        page-break-inside: avoid;
+    }
+
+    .card-header {
+        background-color: #f4f6f9 !important;
+        border-bottom: 2px solid #3498db !important;
+        padding: 10px 15px !important;
+    }
+
+    .card-header h3 {
+        margin: 0;
+        font-size: 14pt;
+        color: #2c3e50;
+    }
+
+    .card-body {
+        padding: 15px !important;
+    }
+
+    /* Table Styling (Premium/Clean) */
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin-top: 10px;
+        font-size: 10pt;
+    }
+
+    table thead th {
+        background-color: #2c3e50 !important;
+        /* Dark header */
+        color: #ffffff !important;
+        font-weight: 600;
+        padding: 8px 12px;
+        text-align: left;
+        border: 1px solid #2c3e50;
+    }
+
+    table tbody td {
+        background-color: #ffffff !important;
+        color: #2c3e50;
+        padding: 8px 12px;
+        border: 1px solid #e0e6ed;
+    }
+
+    /* Zebra Striping */
+    table tbody tr:nth-child(even) td {
+        background-color: #f8f9fa !important;
+    }
+
+    /* Money Columns Alignment */
+    .money,
+    td.money {
+        text-align: right !important;
+        font-family: 'Consolas', 'Monaco', monospace;
+    }
+
+    .money.lak {
+        color: #2980b9 !important;
+    }
+
+    .money.thb {
+        color: #8e44ad !important;
+    }
+
+    /* Summary Dashboard Section (Top horizontal cards) */
+    /* Assuming they are divs with inline styles, we might need to override */
+    .report-summary-box {
+        border: 1px solid #ddd;
+        padding: 10px;
+        border-radius: 8px;
+        background: #fff;
+    }
+
+    /* Force Vertical Stacking for Detailed Tables */
+    .grid-2-col {
+        display: block !important;
+        grid-template-columns: 1fr !important;
+        gap: 0 !important;
+    }
+
+    .grid-2-col>div {
+        width: 100% !important;
+        margin-bottom: 30px !important;
+        page-break-inside: avoid;
+    }
+}

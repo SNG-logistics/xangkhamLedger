@@ -17,8 +17,8 @@
     total_prizes; const profit_lak=net_sales - (parseFloat(expenseTotal.total_lak) || 0); const profit_thb=0 -
     (parseFloat(expenseTotal.total_thb) || 0); %>
 
-    <!-- Summary Dashboard (Horizontal) -->
-    <div class="card mb-20">
+    <!-- Screen Dashboard (Hidden on Print) -->
+    <div class="card mb-20 no-print">
         <div class="card-body">
             <div style="display: flex; gap: 15px; justify-content: space-between;">
                 <!-- 1. Gross Sales -->
@@ -71,8 +71,67 @@
         </div>
     </div>
 
+    <!-- Print Only Summary Table -->
+    <div class="print-only mb-20">
+        <h3>สรุปผลประกอบการ (Performance Summary)</h3>
+        <table style="width: 100%; border: 1px solid #ddd; margin-bottom: 20px;">
+            <thead>
+                <tr style="background-color: #2c3e50; color: white;">
+                    <th style="padding: 10px;">รายการ</th>
+                    <th style="padding: 10px; text-align: right;">จำนวนเงิน (LAK)</th>
+                    <th style="padding: 10px; text-align: right;">หมายเหตุ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 8px;">1. ยอดขายรวม (Gross Sales)</td>
+                    <td style="padding: 8px; text-align: right; font-weight: bold; color: #2980b9;">
+                        <%= money.format(gross_sales) %>
+                    </td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px;">2. หัก ยอดถูกรางวัล (Prizes)</td>
+                    <td style="padding: 8px; text-align: right; color: #c0392b;">- <%= money.format(total_prizes) %>
+                    </td>
+                    <td></td>
+                </tr>
+                <tr style="background-color: #e8f8f5; font-weight: bold;">
+                    <td style="padding: 8px;">3. ยอดขายสุทธิ (Net Sales)</td>
+                    <td style="padding: 8px; text-align: right; color: #27ae60;">
+                        <%= money.format(net_sales) %>
+                    </td>
+                    <td>(1 - 2)</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px;">4. หัก ค่าใช้จ่าย (Expenses)</td>
+                    <td style="padding: 8px; text-align: right; color: #7f8c8d;">- <%=
+                            money.format(expenseTotal.total_lak || 0) %>
+                    </td>
+                    <td></td>
+                </tr>
+                <tr style="background-color: #2ecc71; color: white; font-weight: bold; font-size: 1.1em;">
+                    <td style="padding: 10px;">5. กำไรสุทธิ (Net Profit)</td>
+                    <td style="padding: 10px; text-align: right;">
+                        <%= money.format(profit_lak) %>
+                    </td>
+                    <td>(3 - 4)</td>
+                </tr>
+                <% if (summary.sales_thb) { %>
+                    <tr style="background-color: #fce4ec; color: #c2185b; font-weight: bold;">
+                        <td style="padding: 10px;">(Optional) ยอดรวมสุทธิ (THB)</td>
+                        <td style="padding: 10px; text-align: right;">
+                            <%= money.format(summary.sales_thb) %>
+                        </td>
+                        <td>ระบุตามจริง</td>
+                    </tr>
+                    <% } %>
+            </tbody>
+        </table>
+    </div>
+
     <!-- Detailed Tables Section -->
-    <div class="grid-2-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <div class="grid-2-col">
 
         <!-- Expenses Detail -->
         <div class="card">
@@ -80,31 +139,29 @@
                 <h3>💰 รายละเอียดค่าใช้จ่าย</h3>
             </div>
             <div class="card-body">
-                <div class="stats-grid mb-10">
-                    <div class="stat-card thb">
-                        <h4>รวม THB</h4>
-                        <div class="value">
-                            <%= money.format(expenseTotal.total_thb || 0) %>
-                        </div>
-                    </div>
-                </div>
+
 
                 <div class="table-container mt-20">
                     <table>
                         <thead>
                             <tr>
+                                <th style="width: 50px; text-align: center;">ลำดับ</th>
                                 <th>เวลาเกิด</th>
                                 <th>ประเภท</th>
                                 <th>รายละเอียด</th>
                                 <th>LAK</th>
-                                <th>THB</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <% expenses.forEach(exp=> { %>
-                                <tr>
+                            <% expenses.forEach((exp, index)=> { %>
+                                <tr
+                                    style="<%= exp.category === 'จ่ายโปร' ? 'background-color: #ffebee; color: #c62828;' : '' %>">
+                                    <td style="text-align: center;">
+                                        <%= index + 1 %>
+                                    </td>
                                     <td>
-                                        <%= exp.occurred_at %>
+                                        <%= new Date(exp.occurred_at).toLocaleString('th-TH', { year: 'numeric' ,
+                                            month: 'short' , day: 'numeric' , hour: '2-digit' , minute: '2-digit' }) %>
                                     </td>
                                     <td>
                                         <%= exp.category %>
@@ -114,9 +171,6 @@
                                     </td>
                                     <td class="money lak">
                                         <%= money.format(exp.amount_lak) %>
-                                    </td>
-                                    <td class="money thb">
-                                        <%= money.format(exp.amount_thb) %>
                                     </td>
                                 </tr>
                                 <% }) %>
@@ -139,7 +193,6 @@
                                 <th>ธนาคาร</th>
                                 <th>เลขบัญชี</th>
                                 <th>ยอด LAK</th>
-                                <th>ยอด THB</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -154,18 +207,12 @@
                                     <td class="money lak">
                                         <%= money.format(bank.balance_lak) %>
                                     </td>
-                                    <td class="money thb">
-                                        <%= money.format(bank.balance_thb) %>
-                                    </td>
                                 </tr>
                                 <% }) %>
                                     <tr style="font-weight: bold; background: #f8f9fa;">
                                         <td colspan="2">รวม</td>
                                         <td class="money lak">
                                             <%= money.format(bankTotal.total_lak) %>
-                                        </td>
-                                        <td class="money thb">
-                                            <%= money.format(bankTotal.total_thb) %>
                                         </td>
                                     </tr>
                         </tbody>

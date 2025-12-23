@@ -3,7 +3,8 @@ const db = require('../config/db');
 
 const rbac = {
     canModifyPeriod: async (req, res, next) => {
-        const periodId = req.params.id || req.body.period_id;
+        // Prioritize explicit period_id (body/query) over params.id (which might be expense/bank id)
+        const periodId = req.body.period_id || req.query.period_id || req.params.id;
         if (!periodId) {
             return res.status(400).json({ error: 'Period ID required' });
         }

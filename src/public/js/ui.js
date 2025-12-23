@@ -23,6 +23,15 @@ document.addEventListener('DOMContentLoaded', function () {
             this.value = this.value.replace(/,/g, '');
         });
     });
+
+    // Clean money inputs before submit
+    document.addEventListener('submit', function (e) {
+        const form = e.target;
+        const moneyInputs = form.querySelectorAll('input[data-money]');
+        moneyInputs.forEach(input => {
+            input.value = input.value.replace(/,/g, '');
+        });
+    });
 });
 
 // Modal functions
@@ -97,7 +106,7 @@ function unlockPeriod(periodId) {
 function deleteExpense(id, periodId) {
     if (!confirm('ต้องการลบรายการนี้หรือไม่?')) return;
 
-    fetch(`/expenses/${id}`, {
+    fetch(`/expenses/${id}?period_id=${periodId}`, {
         method: 'DELETE'
     })
         .then(res => res.json())
@@ -117,7 +126,7 @@ function deleteExpense(id, periodId) {
 function deleteBank(id, periodId) {
     if (!confirm('ต้องการลบรายการนี้หรือไม่?')) return;
 
-    fetch(`/banks/${id}`, {
+    fetch(`/banks/${id}?period_id=${periodId}`, {
         method: 'DELETE'
     })
         .then(res => res.json())
@@ -125,6 +134,26 @@ function deleteBank(id, periodId) {
             if (data.success) {
                 alert('ลบสำเร็จ!');
                 location.href = '/periods/' + periodId;
+            } else {
+                alert('Error: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(err => {
+            alert('Error: ' + err.message);
+        });
+}
+
+function deletePeriod(id) {
+    if (!confirm('ยืนยันลบงวดนี้?\n⚠️ คำเตือน: ข้อมูลทั้งหมดในงวด (รายรับ/รายจ่าย/ยอดธนาคาร) จะถูกลบถาวร!')) return;
+
+    fetch(`/periods/${id}`, {
+        method: 'DELETE'
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert('ลบงวดสำเร็จ!');
+                location.reload();
             } else {
                 alert('Error: ' + (data.error || 'Unknown error'));
             }
