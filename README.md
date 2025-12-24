@@ -8,7 +8,7 @@
 - **Backend**: Node.js + Express
 - **View Engine**: EJS (Server-Side Rendering)
 - **Database**: MySQL
-- **File Upload**: multer / express-fileupload
+- **File Upload**: multer / express-fileuploads
 - **Auth**: Session-based
 - **CSS**: Vanilla CSS (ไม่ใช้ Framework)
 - **JS**: Vanilla JavaScript
