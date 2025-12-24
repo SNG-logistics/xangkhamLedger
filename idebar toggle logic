@@ -1,0 +1,29 @@
+[33mcommit 9cec0ce513c8adc140861310a6bd0f90165749bc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: VAI <kaneong5@gmail.com>
+Date:   Wed Dec 24 23:58:25 2025 +0700
+
+    Add index routes for summaries, banks, and expenses
+
+[33mcommit 68cfb9a6361835a5215e8bd68fd3ce52848336af[m[33m ([m[1;32mdev-force[m[33m)[m
+Author: VAI <kaneong5@gmail.com>
+Date:   Wed Dec 24 22:53:01 2025 +0700
+
+    Fix sidebar navigation and server configuration
+
+[33mcommit 53d9ae1db93106b7df88cd7b253c38f75e546bb5[m
+Author: VAI <kaneong5@gmail.com>
+Date:   Wed Dec 24 22:48:35 2025 +0700
+
+    Fix sidebar navigation and server configuration
+
+[33mcommit 212fd0e88f444bf2f003f10ecb521729ce8dde17[m
+Author: VAI <kaneong5@gmail.com>
+Date:   Wed Dec 24 17:25:18 2025 +0700
+
+    Feat: Modernize print report layouts with color-coded tables
+
+[33mcommit ff4277ac2235dedc5055c5fa0be64f7925f0d3da[m
+Author: VAI <kaneong5@gmail.com>
+Date:   Wed Dec 24 17:07:03 2025 +0700
+
+    Update: Add profit calculation to reports and dashboard

@@ -24,12 +24,28 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (toggleBtn && sidebar && mainContent) {
-        toggleBtn.addEventListener('click', function () {
+        toggleBtn.addEventListener('click', function (e) {
+            e.stopPropagation(); // Prevent immediate closing when clicking toggle
+
+            // Desktop behavior
             sidebar.classList.toggle('collapsed');
             mainContent.classList.toggle('expanded');
 
-            // Save state
+            // Mobile behavior
+            sidebar.classList.toggle('mobile-active');
+
+            // Save state (only for desktop preference)
             localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function (e) {
+            if (window.innerWidth <= 768) {
+                if (!sidebar.contains(e.target) && !toggleBtn.contains(e.target) && sidebar.classList.contains('mobile-active')) {
+                    sidebar.classList.remove('mobile-active');
+                    sidebar.classList.remove('collapsed'); // Reset to default if needed
+                }
+            }
         });
     }
     // -----------------------------
