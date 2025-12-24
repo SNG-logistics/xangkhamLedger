@@ -1,5 +1,3 @@
-// FILE: src/public/js/ui.js
-
 // Money input formatter
 function formatMoneyInput(input) {
     let value = input.value.replace(/,/g, '');
@@ -11,8 +9,31 @@ function formatMoneyInput(input) {
     }
 }
 
-// Auto-format money inputs on blur
+// Auto-format money inputs on blur AND Sidebar Logic
 document.addEventListener('DOMContentLoaded', function () {
+    // ---- Sidebar Toggle Logic ----
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('main-content');
+    const toggleBtn = document.getElementById('sidebar-toggle');
+
+    // Check saved state
+    const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (isCollapsed && sidebar && mainContent) {
+        sidebar.classList.add('collapsed');
+        mainContent.classList.add('expanded');
+    }
+
+    if (toggleBtn && sidebar && mainContent) {
+        toggleBtn.addEventListener('click', function () {
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+
+            // Save state
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        });
+    }
+    // -----------------------------
+
     const moneyInputs = document.querySelectorAll('input[data-money]');
     moneyInputs.forEach(input => {
         input.addEventListener('blur', function () {

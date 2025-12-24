@@ -15,6 +15,12 @@ app.use(bodyParser.json());
 app.use(fileUpload());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Make 'path' available to all views (for sidebar active state)
+app.use((req, res, next) => {
+    res.locals.path = req.path;
+    next();
+});
+
 // Session
 app.use(session({
     secret: process.env.SESSION_SECRET || 'changkhum-secret-key',
@@ -122,10 +128,10 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
     console.log(`
 ╔═══════════════════════════════════════════╗
-║   XANGKHAM Ledger - Server Started!     ║
+║   XANGKHAM Ledger - Server Started!       ║
 ╠═══════════════════════════════════════════╣
-║   Port: ${PORT}                              ║
-║   URL: http://localhost:${PORT}              ║
+║   Port: ${PORT}                           ║
+║   URL: http://localhost:${PORT}           ║
 ║                                           ║
 ║   Default Login:                          ║
 ║   Username: admin                         ║
