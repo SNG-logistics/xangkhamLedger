@@ -329,3 +329,26 @@ body {
     /* Always show logo text in mobile menu */
   }
 }
+
+/* Report Row Colors (Shared with Print) */
+tr.row-pay-pro td {
+  background-color: #ffebee !important;
+  color: #c62828 !important;
+}
+
+tr.row-pay-general td {
+  background-color: #ffffff !important;
+  color: #2c3e50 !important;
+}
+
+tr.row-pay-other td {
+  background-color: #f5f5f5 !important;
+  color: #616161 !important;
+}
+
+/* Badge Updates */
+.badge-danger {
+  color: #c62828;
+  background-color: #ffebee;
+  border-color: #c62828;
+}

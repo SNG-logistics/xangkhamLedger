@@ -140,6 +140,7 @@
         /* Light Red */
         color: #c62828 !important;
         -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 
     tr.row-pay-general td {
@@ -147,6 +148,7 @@
         /* White */
         color: #2c3e50 !important;
         -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 
     tr.row-pay-other td {
@@ -154,6 +156,7 @@
         /* Light Grey */
         color: #616161 !important;
         -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 
     .badge {
