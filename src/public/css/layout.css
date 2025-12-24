@@ -268,20 +268,64 @@ body {
 }
 
 /* Responsive */
+/* Responsive Overlay Sidebar */
 @media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+
   .sidebar {
-    width: 200px;
+    position: fixed;
+    top: 70px;
+    /* Below header */
+    left: -100%;
+    /* Hide off-screen */
+    width: 250px;
+    height: calc(100vh - 70px);
+    z-index: 1050;
+    transition: left 0.3s ease;
+    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .sidebar.mobile-active {
+    left: 0;
+    /* Slide in */
+    width: 250px;
+    /* Ensure width is set */
   }
 
   .main-content {
-    margin-left: 200px;
+    margin-left: 0 !important;
+    width: 100%;
+  }
+
+  .main-content.expanded {
+    margin-left: 0 !important;
   }
 
   .header {
-    padding: 15px 20px;
+    padding: 0 20px;
+    justify-content: space-between;
+  }
+
+  .header-left {
+    gap: 15px;
+  }
+
+  .header h2 {
+    font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .content {
-    padding: 20px;
+    padding: 15px;
+  }
+
+  .logo-text,
+  .sidebar-header h1 {
+    display: block !important;
+    /* Always show logo text in mobile menu */
   }
 }
