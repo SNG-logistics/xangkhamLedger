@@ -3,6 +3,25 @@ const Bank = require('../models/bank.model');
 const audit = require('../middleware/audit');
 
 const bankController = {
+    index: async (req, res) => {
+        try {
+            // Find all periods to let user filter, or show latest
+            const periods = await require('../models/period.model').findAll();
+            // Optionally, we could list ALL bank balances, but typically they are period-specific.
+            // For now, let's redirect to dashboard or show a period selector.
+            // A better approach for "Bank Accounts" sidebar link is to show valid balances across periods.
+            // Let's reuse the summary index style: List periods and showing bank status?
+            // OR finding all bank balances:
+            // const banks = await Bank.findAll(); (Need to implement findAll in model)
+
+            // Simpler: Render a page listing periods to manage bank accounts for
+            res.render('banks/index', { periods });
+        } catch (error) {
+            console.error(error);
+            res.status(500).send('Error loading bank index');
+        }
+    },
+
     showForm: async (req, res) => {
         try {
             const periodId = req.params.periodId;

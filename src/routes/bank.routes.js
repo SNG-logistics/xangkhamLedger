@@ -5,6 +5,9 @@ const bankController = require('../controllers/bank.controller');
 const auth = require('../middleware/auth');
 const rbac = require('../middleware/rbac');
 
+// List all banks (via periods)
+router.get('/', auth.requireAuth, bankController.index);
+
 router.get('/:periodId', auth.requireAuth, bankController.showForm);
 router.post('/create', auth.requireAuth, rbac.canModifyPeriod, bankController.create);
 router.post('/update', auth.requireAuth, rbac.canModifyPeriod, bankController.update);

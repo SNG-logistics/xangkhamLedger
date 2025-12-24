@@ -1,0 +1,52 @@
+<div class="page-header">
+    <h1><i class="fas fa-receipt"></i> ค่าใช้จ่าย (Expenses)</h1>
+</div>
+
+<div class="card">
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>งวดที่</th>
+                    <th>ประจำเดือน</th>
+                    <th>ยอดรวมค่าใช้จ่าย (LAK)</th>
+                    <th>สถานะ</th>
+                    <th>จัดการ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (periods && periods.length> 0) { %>
+                    <% periods.forEach(period=> { %>
+                        <tr>
+                            <td>
+                                <%= period.period_date.getDate() %>
+                            </td>
+                            <td>
+                                <%= period.period_month %>/<%= period.period_year %>
+                            </td>
+                            <td class="text-right">
+                                <%= period.total_expenses ? period.total_expenses.toLocaleString('en-US',
+                                    {minimumFractionDigits: 2}) : '0.00' %>
+                            </td>
+                            <td>
+                                <span
+                                    class="badge <%= period.status === 'OPEN' ? 'badge-success' : 'badge-secondary' %>">
+                                    <%= period.status %>
+                                </span>
+                            </td>
+                            <td>
+                                <a href="/expenses?period_id=<%= period.id %>" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-list"></i> ดูรายการ
+                                </a>
+                            </td>
+                        </tr>
+                        <% }); %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="5" class="text-center">ไม่พบข้อมูล</td>
+                                </tr>
+                                <% } %>
+            </tbody>
+        </table>
+    </div>
+</div>

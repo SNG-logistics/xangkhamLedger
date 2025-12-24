@@ -6,6 +6,16 @@ const audit = require('../middleware/audit');
 const path = require('path');
 
 const expenseController = {
+    index: async (req, res) => {
+        try {
+            const periods = await require('../models/period.model').findAll();
+            res.render('expenses/index', { periods });
+        } catch (error) {
+            console.error(error);
+            res.status(500).send('Error loading expense index');
+        }
+    },
+
     list: async (req, res) => {
         try {
             const periodId = req.query.period_id;

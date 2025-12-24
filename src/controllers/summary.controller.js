@@ -5,6 +5,16 @@ const fs = require('fs');
 const path = require('path');
 
 const summaryController = {
+    index: async (req, res) => {
+        try {
+            const periods = await require('../models/period.model').findAll();
+            res.render('summaries/index', { periods });
+        } catch (error) {
+            console.error(error);
+            res.status(500).send('Error loading summaries');
+        }
+    },
+
     showForm: async (req, res) => {
         try {
             const periodId = req.params.periodId;
