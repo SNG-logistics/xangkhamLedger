@@ -136,11 +136,14 @@
 
     /* Row Colors for Expenses */
     tr.row-pay-pro td {
-        background-color: #ffebee !important;
-        /* Light Red */
-        color: #c62828 !important;
+        background-color: #ffcdd2 !important;
+        /* Red 100 */
+        color: #b71c1c !important;
+        /* Red 900 */
+        font-weight: bold !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+        border-bottom: 1px solid #ef9a9a !important;
     }
 
     tr.row-pay-general td {
@@ -157,6 +160,16 @@
         color: #616161 !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+    }
+
+    tr.row-highlight td {
+        background-color: #e8f5e9 !important;
+        /* Green 50 */
+        font-weight: bold !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        border-top: 2px solid #a5d6a7 !important;
+        border-bottom: 2px solid #a5d6a7 !important;
     }
 
     .badge {
