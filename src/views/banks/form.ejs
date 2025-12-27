@@ -99,6 +99,8 @@
 </div>
 
 <script>
+    const currentPeriodId = '<%= periodId %>';
+
     function autoFillAccount() {
         const select = document.getElementById('bankSelect');
         const option = select.options[select.selectedIndex];
@@ -122,13 +124,20 @@
             const response = await fetch(`/banks/${id}`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason })
+                body: JSON.stringify({ reason, period_id: currentPeriodId })
             });
 
             if (response.ok) {
                 location.reload();
             } else {
-                alert('เกิดข้อผิดพลาดในการลบ');
+                // Try to parse error message if JSON
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    const result = await response.json();
+                    alert(result.error || 'เกิดข้อผิดพลาดในการลบ');
+                } else {
+                    alert('เกิดข้อผิดพลาด (Server Error)');
+                }
             }
         } catch (error) {
             console.error(error);

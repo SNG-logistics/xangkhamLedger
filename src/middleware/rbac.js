@@ -5,7 +5,10 @@ const rbac = {
     canModifyPeriod: async (req, res, next) => {
         // Prioritize explicit period_id (body/query) over params.id (which might be expense/bank id)
         const periodId = req.body.period_id || req.query.period_id || req.params.id;
+        console.log(`[RBAC] Checking modify permission. Path: ${req.path}, Body period_id: ${req.body.period_id}, Params id: ${req.params.id}, Resolved periodId: ${periodId}`);
+
         if (!periodId) {
+            console.log('[RBAC] No period ID found');
             return res.status(400).json({ error: 'Period ID required' });
         }
 

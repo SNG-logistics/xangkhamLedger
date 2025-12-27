@@ -4,6 +4,9 @@ const auth = {
         if (req.session && req.session.userId) {
             return next();
         }
+        if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+            return res.status(401).json({ error: 'Unauthorized: Please login first' });
+        }
         return res.redirect('/login');
     },
 

@@ -1,107 +1,39 @@
-# 🐘 XANGKHAM Ledger (ระบบบัญชีช้างคำ)
+# XANGKHAM Ledger
+Lottery accounting web app for Lao legal lottery operations. Built with Node.js, Express, EJS, and MySQL.
 
-ระบบบริหารจัดการบัญชีหวยพัฒนา (ลาว) แบบครบวงจร รองรับการจัดการงวด, รายรับ-รายจ่าย, กระแสเงินสด และรายงานสรุปผล
+## Features
+- Period management: create, lock/unlock, backfill mode, sequential lock checks.
+- Income & expenses: dual currency (LAK/THB), attachments, audit trail.
+- Bank & cashflow: bank balances, bank accounts, cashflow tracking.
+- Reports: dashboard, monthly print view, audit log.
+- Security: session auth, SUPER_ADMIN checks, RBAC on locked periods.
 
----
+## Quick Start
+1) Prerequisites: Node.js ≥16, MySQL.
+2) Install deps: `npm install`.
+3) Copy `.env.example` to `.env` and set DB credentials and `SESSION_SECRET`.
+4) Create DB: `CREATE DATABASE changkhum_ledger CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
+5) Import schema:
+   - Full setup: `mysql -u root -p changkhum_ledger < sql/full_database_setup.sql`
+   - Or base + migrations: `sql/001_schema.sql` → `002_seed_superadmin.sql` → `003_period_engine.sql` … `009_update_audit_log.sql`
+   - Or run helpers: `node scripts/force_schema_update.js` then `node scripts/update_audit_schema.js`.
+6) Seed SUPER_ADMIN: `node src/scripts/seed.js` (or import `sql/002_seed_superadmin.sql`).
+7) Run dev server: `npm run dev` → open `http://localhost:3000` (login `admin` / `admin123`).
 
-## ✨ ฟีเจอร์หลัก (Features)
+## Database Helpers
+- Run incremental migrations (bank/backfill/incidents): `run_all_migrations.bat` or `node run_migrations_js.js`.
+- Audit log schema fix: `node scripts/update_audit_schema.js`.
 
-### 1. ระบบจัดการงวด (Period Management)
-- **Auto Creation**: สร้างงวดใหม่อัตโนมัติ (เฉพาะ จันทร์, พุธ, ศุกร์)
-- **Backfill Mode**: โหมดพิเศษสำหรับสร้างงวดย้อนหลัง (Admin Only)
-- **Lock/Unlock**: ล็อกงวดเพื่อป้องกันการแก้ไขข้อมูลเมื่อปิดยอด
-- **Balance Carry Over**: ยกยอดคงเหลือจากงวดล่าสุดไปงวดถัดไปอัตโนมัติ
+## Troubleshooting
+- Missing columns/tables: rerun schema scripts above.
+- Login fails: ensure admin seed is loaded and DB creds match `.env`.
+- Period edits blocked: period is LOCKED; only SUPER_ADMIN can unlock.
 
-### 2. บันทึกรายรับ-รายจ่าย (Income & Expenses)
-- **Income (ยอดขาย)**: บันทึกยอดขายหวย (LAK)
-- **Expenses (ค่าใช้จ่าย)**: บันทึกค่าใช้จ่ายต่างๆ แบ่งหมวดหมู่ได้
-- **Currency Support**: รองรับ 2 สกุลเงิน (LAK, THB)
-- **Money Format**: แสดงผลตัวเลขแบบมีคอมมา (e.g. 1,000.00)
+## Structure
+- App entry: `src/server.js`
+- Routes/controllers/models: `src/routes`, `src/controllers`, `src/models`
+- Views/static: `src/views`, `src/public`
+- SQL: `sql/*.sql`
 
-### 3. รายงานและสรุปผล (Reports)
-- **Dashboard**: แสดงภาพรวมสถานะการเงินแต่ละงวด
-- **Monthly Report**: รายงานสรุปรายเดือน พร้อม Print View ที่สวยงาม
-- **Audit Log**: บันทึกประวัติการแก้ไขข้อมูลทุกขั้นตอน (Who, What, When)
-
----
-
-## 🛠️ การติดตั้งและเริ่มต้นใช้งาน (Installation)
-
-### 1. Prerequisites
-- **Node.js** (v14 หรือสูงกว่า)
-- **MySQL Server**
-
-### 2. Clone & Install
-```bash
-# ติดตั้ง Library ที่จำเป็น
-npm install
-```
-
-### 3. ตั้งค่า Database
-1. สร้าง Database ชื่อ `changkhum_ledger` (หรือชื่ออื่นตามต้องการ)
-2. แก้ไขไฟล์ `.env` (copy จาก `.env.example`)
-   ```env
-   DB_HOST=localhost
-   DB_USER=root
-   DB_PASSWORD=your_password
-   DB_NAME=changkhum_ledger
-   ```
-3. **รันคำสั่งสร้างตาราง (Migration)**:
-   ```bash
-   # คำสั่งนี้จะสร้างตารางทั้งหมดที่จำเป็น
-   node scripts/force_schema_update.js
-   
-   # คำสั่งนี้สำหรับอัปเดตตาราง Audit (ถ้ามี Error เรื่อง old_value)
-   node scripts/update_audit_schema.js
-   ```
-
-### 4. สร้าง User คนแรก (Super Admin)
-```bash
-node src/scripts/seed.js
-```
-*Default User*: `admin` / `admin123`
-
-### 5. Start Server
-```bash
-npm run dev
-```
-เข้าใช้งานได้ที่: [http://localhost:3000](http://localhost:3000)
-
----
-
-## 📖 คู่มือการใช้งาน (User Manual)
-
-### 1. การสร้างงวด (New Period)
-- กดปุ่ม **+ New Period**
-- เลือกวันที่ต้องการ (ระบบบังคับ จันทร์, พุธ, ศุกร์ เท่านั้น)
-- หากต้องการสร้างงวดเก่า -> ให้เปิดสวิตซ์ **Backfill Mode** ด้านบนก่อน
-
-### 2. การล็อกงวด (Lock Period)
-- เมื่อตรวจสอบข้อมูลครบถ้วน กดปุ่ม **🔒 Lock**
-- **เงื่อนไข**: ต้องล็อกเรียงตามลำดับเวลา (งวดเก่าต้องล็อกก่อนงวดใหม่)
-- **Override**: ถ้ายอดเงินติดลบ ระบบจะเตือนแต่สามารถ Force Lock ได้ (ต้องใส่เหตุผล)
-
-### 3. การแจ้งปัญหา (Incident Report)
-- กดปุ่ม **⚠️ แจ้งเคส** ในหน้ารายการงวด หรือหน้า Detail
-- ระบุความรุนแรง (Low/Medium/High/Critical)
-- **Critical Incident** จะทำให้ล็อกงวดไม่ได้ จนกว่าจะได้รับการแก้ไข
-
----
-
-## 🔧 Troubleshooting (การแก้ปัญหาเบื้องต้น)
-
-### Q: เจอ Error `Unknown column 'old_value'` ใน Audit Log?
-**A:** ให้รันคำสั่ง update schema ใน Terminal:
-```bash
-node scripts/update_audit_schema.js
-```
-
-### Q: ปุ่ม Backfill กดไม่ได้?
-**A:** ลอง Refresh หน้าจอ หรือตรวจสอบว่า Server รันอยู่หรือไม่
-
-### Q: อยากล้างข้อมูลทั้งหมดแล้วเริ่มใหม่?
-**A:** ลบ Database แล้วสร้างใหม่ จากนั้นรัน scripts ตามข้อ 3 อีกครั้ง
-
----
-
-📌 **Developed for XANGKHAM Ledger Project**
+## License
+MIT
