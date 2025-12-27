@@ -5,11 +5,13 @@ const db = require('../config/db');
 const audit = require('../middleware/audit');
 const path = require('path');
 
+const money = require('../utils/money');
+
 const expenseController = {
     index: async (req, res) => {
         try {
             const periods = await require('../models/period.model').findAll();
-            res.render('expenses/index', { periods });
+            res.render('expenses/index', { periods, money });
         } catch (error) {
             console.error(error);
             res.status(500).send('Error loading expense index');
@@ -23,7 +25,7 @@ const expenseController = {
                 return res.status(400).send('Period ID required');
             }
             const expenses = await Expense.findByPeriod(periodId);
-            res.render('expenses/list', { expenses, periodId });
+            res.render('expenses/list', { expenses, periodId, money });
         } catch (error) {
             console.error(error);
             res.status(500).send('Error loading expenses');

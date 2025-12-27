@@ -80,7 +80,10 @@ app.use('/summaries', summaryRoutes);
 app.use('/expenses', expenseRoutes);
 app.use('/banks', bankRoutes);
 app.use('/reports', reportRoutes);
+app.use('/reports', reportRoutes);
 app.use('/audit', auditRoutes);
+app.use('/settings/bank-accounts', require('./routes/bank_account.routes'));
+app.use('/cashflow', require('./routes/cashflow.routes'));
 
 // Dashboard
 const Period = require('./models/period.model');

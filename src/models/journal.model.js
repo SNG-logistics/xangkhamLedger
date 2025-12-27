@@ -2,112 +2,137 @@
 const db = require('../config/db');
 
 const Journal = {
-    createAutoGL: async (periodId, userId) => {
-        // สร้าง Journal Entry อัตโนมัติเมื่อ LOCK งวด
-        const conn = await db.getConnection();
-        try {
-            await conn.beginTransaction();
+  createAutoGL: async (periodId, userId) => {
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
 
-            // Get period data
-            const [periods] = await conn.query('SELECT * FROM periods WHERE id = ?', [periodId]);
-            const period = periods[0];
+      // 1. Cleanup old Auto GL for this period
+      await conn.query('DELETE FROM journal_entries WHERE period_id = ? AND entry_type = "AUTO_GL"', [periodId]);
 
-            // Get sales summary
-            const [summaries] = await conn.query('SELECT * FROM sales_summaries WHERE period_id = ?', [periodId]);
-            const summary = summaries[0] || { sales_lak: 0, sales_thb: 0 };
+      // 2. Fetch Period Info
+      const [periods] = await conn.query('SELECT * FROM periods WHERE id = ?', [periodId]);
+      const period = periods[0];
+      if (!period) throw new Error('Period not found');
 
-            // Get expenses
-            const [expenses] = await conn.query(`
-        SELECT COALESCE(SUM(amount_lak), 0) as total_lak, COALESCE(SUM(amount_thb), 0) as total_thb
-        FROM expenses WHERE accounting_period_id = ? AND is_deleted = FALSE
-      `, [periodId]);
-            const expense = expenses[0];
+      // 3. Fetch Cashflow Transactions
+      const [transactions] = await conn.query(`
+                SELECT t.*, 
+                       b1.bank_name as from_bank_name, b1.account_name as from_account_name,
+                       b2.bank_name as to_bank_name, b2.account_name as to_account_name
+                FROM cashflow_transactions t
+                LEFT JOIN bank_accounts b1 ON t.bank_account_id = b1.id
+                LEFT JOIN bank_accounts b2 ON t.to_bank_account_id = b2.id
+                WHERE t.period_id = ?
+            `, [periodId]);
 
-            // Create journal entry
-            const [result] = await conn.query(`
-        INSERT INTO journal_entries (period_id, entry_date, entry_type, description, created_by)
-        VALUES (?, ?, 'AUTO_GL', ?, ?)
-      `, [periodId, period.period_date, `Auto GL for period ${period.period_date}`, userId]);
+      if (transactions.length === 0) {
+        await conn.commit();
+        return;
+      }
 
-            const journalId = result.insertId;
+      // 4. Create Journal Header
+      const [res] = await conn.query(`
+                INSERT INTO journal_entries(period_id, entry_date, entry_type, description, created_by)
+                VALUES (?, ?, 'AUTO_GL', ?, ?)
+            `, [periodId, period.period_date, `Auto GL for Period ${period.period_date.toISOString().split('T')[0]}`, userId]);
 
-            // Create journal lines (simplified example)
-            // Sales LAK
-            if (summary.sales_lak > 0) {
-                await conn.query(`
-          INSERT INTO journal_lines (journal_entry_id, account_code, account_name, debit_lak)
-          VALUES (?, '1100', 'Cash LAK', ?)
-        `, [journalId, summary.sales_lak]);
+      const journalId = res.insertId;
 
-                await conn.query(`
-          INSERT INTO journal_lines (journal_entry_id, account_code, account_name, credit_lak)
-          VALUES (?, '4100', 'Sales Revenue LAK', ?)
-        `, [journalId, summary.sales_lak]);
-            }
+      // Helper to Insert Line
+      const addLine = async (code, name, dr, cr) => {
+        if (dr === 0 && cr === 0) return;
+        await conn.query(`
+                    INSERT INTO journal_lines (journal_entry_id, account_code, account_name, debit_lak, credit_lak)
+                    VALUES (?, ?, ?, ?, ?)
+                `, [journalId, code, name, dr, cr]);
+      };
 
-            // Sales THB
-            if (summary.sales_thb > 0) {
-                await conn.query(`
-          INSERT INTO journal_lines (journal_entry_id, account_code, account_name, debit_thb)
-          VALUES (?, '1110', 'Cash THB', ?)
-        `, [journalId, summary.sales_thb]);
+      // 5. Process Transactions
+      for (const t of transactions) {
+        const amount = Number(t.amount);
 
-                await conn.query(`
-          INSERT INTO journal_lines (journal_entry_id, account_code, account_name, credit_thb)
-          VALUES (?, '4110', 'Sales Revenue THB', ?)
-        `, [journalId, summary.sales_thb]);
-            }
+        // Bank Account Info Helpers
+        const fromBankName = t.from_bank_name ? `${t.from_bank_name} (${t.from_account_name})` : 'Unknown Bank';
+        const fromBankCode = t.bank_account_id ? `1100-${t.bank_account_id}` : '1100-UNKNOWN';
 
-            // Expenses LAK
-            if (expense.total_lak > 0) {
-                await conn.query(`
-          INSERT INTO journal_lines (journal_entry_id, account_code, account_name, debit_lak)
-          VALUES (?, '5100', 'Expenses LAK', ?)
-        `, [journalId, expense.total_lak]);
+        const toBankName = t.to_bank_name ? `${t.to_bank_name} (${t.to_account_name})` : 'Unknown Bank';
+        const toBankCode = t.to_bank_account_id ? `1100-${t.to_bank_account_id}` : '1100-UNKNOWN';
 
-                await conn.query(`
-          INSERT INTO journal_lines (journal_entry_id, account_code, account_name, credit_lak)
-          VALUES (?, '1100', 'Cash LAK', ?)
-        `, [journalId, expense.total_lak]);
-            }
+        if (t.type === 'TRANSFER') {
+          // Dr Bank (To) / Cr Bank (From)
+          await addLine(toBankCode, toBankName, amount, 0);
+          await addLine(fromBankCode, fromBankName, 0, amount);
+        } else if (t.type === 'INFLOW') {
+          // Dr Bank (From/Receiving Account - Inflow usually has 'bank_account_id' as the receiver)
+          // Note: Schema says 'bank_account_id' is From/Main. For Inflow, it's where money goes IN.
+          await addLine(fromBankCode, fromBankName, amount, 0);
 
-            // Expenses THB
-            if (expense.total_thb > 0) {
-                await conn.query(`
-          INSERT INTO journal_lines (journal_entry_id, account_code, account_name, debit_thb)
-          VALUES (?, '5110', 'Expenses THB', ?)
-        `, [journalId, expense.total_thb]);
+          // Cr Source (Revenue/Equity) based on Category
+          switch (t.category) {
+            case 'SALES_IN':
+              await addLine('4100', 'Revenue from Sales', 0, amount);
+              break;
+            case 'TOP_UP_IN':
+              await addLine('3100', 'Capital - Top Up', 0, amount);
+              break;
+            case 'SETTLEMENT_CLEAR':
+              await addLine('3200', 'Settlement Clearing', 0, amount);
+              break;
+            default:
+              await addLine('4900', `Other Income (${t.category})`, 0, amount);
+          }
+        } else if (t.type === 'OUTFLOW') {
+          // Cr Bank (From/Paying Account)
+          await addLine(fromBankCode, fromBankName, 0, amount);
 
-                await conn.query(`
-          INSERT INTO journal_lines (journal_entry_id, account_code, account_name, credit_thb)
-          VALUES (?, '1110', 'Cash THB', ?)
-        `, [journalId, expense.total_thb]);
-            }
-
-            await conn.commit();
-            return journalId;
-        } catch (error) {
-            await conn.rollback();
-            throw error;
-        } finally {
-            conn.release();
+          // Dr Expense/Liability
+          switch (t.category) {
+            case 'PRIZE_PAYOUT':
+              await addLine('5100', 'Prize Payout', amount, 0);
+              break;
+            case 'OPEX':
+              await addLine('5200', 'Operating Expense', amount, 0);
+              break;
+            case 'TAX_PAY':
+              await addLine('5300', 'Tax Expense', amount, 0);
+              break;
+            case 'BROKER_PAY':
+              await addLine('5400', 'Broker Commission', amount, 0);
+              break;
+            case 'DIVIDEND_PAY':
+              await addLine('3300', 'Retained Earnings - Dividend', amount, 0);
+              break;
+            default:
+              await addLine('5900', `Other Expense (${t.category})`, amount, 0);
+          }
         }
-    },
+      }
 
-    findByPeriod: async (periodId) => {
-        const [entries] = await db.query(`
+      await conn.commit();
+      return journalId;
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      conn.release();
+    }
+  },
+
+  findByPeriod: async (periodId) => {
+    const [entries] = await db.query(`
       SELECT * FROM journal_entries WHERE period_id = ? ORDER BY entry_date DESC
     `, [periodId]);
 
-        for (let entry of entries) {
-            const [lines] = await db.query(`
+    for (let entry of entries) {
+      const [lines] = await db.query(`
         SELECT * FROM journal_lines WHERE journal_entry_id = ? ORDER BY id
       `, [entry.id]);
-            entry.lines = lines;
-        }
-
-        return entries;
+      entry.lines = lines;
     }
+
+    return entries;
+  }
 };
 
 module.exports = Journal;

@@ -31,6 +31,16 @@ const Period = {
         return rows[0];
     },
 
+    // Check if there are any OPEN periods older than the given date
+    hasOpenOlder: async (date) => {
+        const [rows] = await db.query(`
+            SELECT COUNT(*) as count 
+            FROM periods 
+            WHERE period_date < ? AND status = 'OPEN' AND is_deleted = FALSE
+        `, [date]);
+        return rows[0].count > 0;
+    },
+
     findByYearMonth: async (year, month) => {
         const [rows] = await db.query(`
             SELECT p.*,
@@ -46,6 +56,18 @@ const Period = {
     },
 
     create: async (periodDate, year, month) => {
+        // Validation: Mon/Wed/Fri only
+        // Validation logic is now handled in the Controller to support Backfill Mode
+        // const date = new Date(periodDate);
+        // ... validation removed ...
+
+        // Validation: Time check (Example: prevents creating *past* periods if required, or strictly closing time. 
+        // Requirement says "Close < 20:00". This usually applies to betting/editing, not necessarily creating the period record itself.
+        // But if we want to enforce creation rules:
+        // For now, only Day validation is strictly "engine" related for creation. 
+        // The "Close < 20:00" usually implies "Lock automatically" or "Prevent edits". 
+        // We will handle "Prevent edits" in RBAC/Controller.
+
         const [result] = await db.query(
             'INSERT INTO periods (period_date, period_year, period_month) VALUES (?, ?, ?)',
             [periodDate, year, month]

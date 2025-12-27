@@ -11,14 +11,17 @@
             <div class="bank-grid">
                 <% banks.forEach(bank=> { %>
                     <div class="card">
-                        <h4>
-                            <%= bank.bank_name %>
-                        </h4>
+                        <div class="flex-between">
+                            <h4>
+                                <%= bank.bank_name %>
+                            </h4>
+                            <button class="btn btn-sm btn-danger icon-btn" onclick="deleteBank('<%= bank.id %>')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                         <p>บัญชี: <%= bank.bank_account || '-' %>
                         </p>
                         <p class="money lak">LAK: <%= bank.balance_lak %>
-                        </p>
-                        <p class="money thb">THB: <%= bank.balance_thb %>
                         </p>
                     </div>
                     <% }) %>
@@ -32,28 +35,34 @@
                     <input type="hidden" name="period_id" value="<%= periodId %>">
 
                     <div class="form-group">
-                        <label>ธนาคาร</label>
-                        <select name="bank_name" class="form-control" required>
-                            <option value="BCEL">BCEL</option>
-                            <option value="LDB">LDB</option>
-                            <option value="JDB">JDB</option>
-                            <option value="OTHER">อื่นๆ</option>
+                        <label>ธนาคาร (Bank)</label>
+                        <select name="bank_name" id="bankSelect" class="form-control" onchange="autoFillAccount()"
+                            required>
+                            <option value="">-- เลือกธนาคาร --</option>
+                            <% if (typeof masterAccounts !=='undefined' ) { %>
+                                <% masterAccounts.forEach(acc=> { %>
+                                    <option value="<%= acc.bank_name %>" data-account="<%= acc.account_number %>"
+                                        data-name="<%= acc.account_name %>">
+                                        <%= acc.bank_name %> (<%= acc.account_name %>)
+                                    </option>
+                                    <% }) %>
+                                        <% } else { %>
+                                            <option value="BCEL">BCEL</option>
+                                            <option value="LDB">LDB</option>
+                                            <option value="JDB">JDB</option>
+                                            <option value="OTHER">อื่นๆ</option>
+                                            <% } %>
                         </select>
                     </div>
 
                     <div class="form-group">
-                        <label>เลขบัญชี</label>
-                        <input type="text" name="bank_account" class="form-control">
+                        <label>เลขบัญชี (Account Number)</label>
+                        <input type="text" name="bank_account" id="bankAccount" class="form-control">
                     </div>
 
                     <div class="form-group">
-                        <label>ยอดเงิน LAK</label>
+                        <label>ยอดเงิน LAK (Amount)</label>
                         <input type="number" step="0.01" name="balance_lak" class="form-control" data-money required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>ยอดเงิน THB</label>
-                        <input type="number" step="0.01" name="balance_thb" class="form-control" data-money required>
                     </div>
 
                     <div class="form-group">
@@ -67,4 +76,64 @@
                     </div>
                 </form>
     </div>
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteBankModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3>ยืนยันการลบรายการ</h3>
+        <p class="text-danger">ต้องการลบยอดเงินธนาคารนี้หรือไม่?</p>
+        <form id="deleteForm">
+            <input type="hidden" id="deleteId">
+            <div class="form-group">
+                <label>เหตุผล (Reason) <span class="text-danger">*</span></label>
+                <textarea id="deleteReason" class="form-control" rows="2" required
+                    placeholder="ระบุเหตุผล..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="hideModal('deleteBankModal')">ยกเลิก</button>
+                <button type="submit" class="btn btn-danger">ยืนยันลบ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function autoFillAccount() {
+        const select = document.getElementById('bankSelect');
+        const option = select.options[select.selectedIndex];
+        if (option.dataset.account) {
+            document.getElementById('bankAccount').value = option.dataset.account;
+        }
+    }
+
+    function deleteBank(id) {
+        document.getElementById('deleteId').value = id;
+        document.getElementById('deleteReason').value = '';
+        showModal('deleteBankModal');
+    }
+
+    document.getElementById('deleteForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('deleteId').value;
+        const reason = document.getElementById('deleteReason').value;
+
+        try {
+            const response = await fetch(`/banks/${id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason })
+            });
+
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('เกิดข้อผิดพลาดในการลบ');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error connecting to server');
+        }
+    };
+</script>
 </div>

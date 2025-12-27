@@ -1,0 +1,239 @@
+<%- include('../layout', { title: title }) %>
+
+    <div class="card">
+        <div class="flex-between">
+            <h2>บัญชีรายรับ-รายจ่าย (Cashflow Ledger)</h2>
+            <button class="btn btn-primary" onclick="openAddModal()">ลงรายการใหม่</button>
+        </div>
+
+        <div class="table-container mt-20">
+            <table>
+                <thead>
+                    <tr>
+                        <th>วันที่</th>
+                        <th>ประเภท</th>
+                        <th>หมวดหมู่</th>
+                        <th>จำนวนเงิน</th>
+                        <th>จากบัญชี</th>
+                        <th>เข้าบัญชี</th>
+                        <th>รายละเอียด</th>
+                        <th>ผู้ทำรายการ</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% transactions.forEach(t=> { %>
+                        <tr>
+                            <td>
+                                <%= new Date(t.transaction_date).toLocaleDateString('th-TH') %>
+                            </td>
+                            <td><span class="badge">
+                                    <%= t.type %>
+                                </span></td>
+                            <td>
+                                <%= t.category %>
+                            </td>
+                            <td class="<%= t.type === 'INFLOW' ? 'text-success' : 'text-danger' %>">
+                                <%= t.type==='INFLOW' ? '+' : '-' %>
+                                    <%= Number(t.amount).toLocaleString() %>
+                            </td>
+                            <td>
+                                <%= t.from_bank_name ? `${t.from_bank_name} (${t.from_account_name})` : '-' %>
+                            </td>
+                            <td>
+                                <%= t.to_bank_name ? `${t.to_bank_name} (${t.to_account_name})` : '-' %>
+                            </td>
+                            <td>
+                                <%= t.description || '-' %>
+                            </td>
+                            <td>
+                                <%= t.created_by_username %>
+                            </td>
+                            <td>
+                                <button class="btn-icon delete" onclick="deleteTransaction('<%= t.id %>')">🗑️</button>
+                            </td>
+                        </tr>
+                        <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Transaction Modal -->
+    <div id="addTransactionModal" class="modal-overlay">
+        <div class="modal-box" style="max-width: 600px;">
+            <h3>ลงรายการใหม่</h3>
+            <form id="transactionForm">
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label>วันที่รายการ</label>
+                        <input type="date" name="transaction_date" class="form-control" required
+                            value="<%= new Date().toISOString().split('T')[0] %>">
+                    </div>
+                    <div class="form-group half">
+                        <label>งวด (Period)</label>
+                        <select name="period_id" id="periodSelect" class="form-control" required>
+                            <option value="">กำลังโหลด...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label>ประเภท (Type)</label>
+                        <select name="type" id="typeSelect" class="form-control" onchange="updateFormState()">
+                            <option value="INFLOW">รายรับ (INFLOW)</option>
+                            <option value="OUTFLOW">รายจ่าย (OUTFLOW)</option>
+                            <option value="TRANSFER">โอนเงิน (TRANSFER)</option>
+                        </select>
+                    </div>
+                    <div class="form-group half">
+                        <label>หมวดหมู่ (Category)</label>
+                        <select name="category" id="categorySelect" class="form-control" required>
+                            <!-- Options populated by JS based on Type -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>จำนวนเงิน</label>
+                    <input type="number" name="amount" class="form-control" required step="0.01">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group half" id="fromAccountGroup">
+                        <label>จากบัญชี (From Account)</label>
+                        <select name="bank_account_id" id="fromAccountSelect" class="form-control">
+                            <option value="">-- เลือกบัญชี --</option>
+                        </select>
+                    </div>
+                    <div class="form-group half" id="toAccountGroup" style="display:none;">
+                        <label>เข้าบัญชี (To Account)</label>
+                        <select name="to_bank_account_id" id="toAccountSelect" class="form-control">
+                            <option value="">-- เลือกบัญชี --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>รายละเอียดเพิ่มเติม</label>
+                    <textarea name="description" class="form-control" rows="2"></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="hideModal('addTransactionModal')">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const categories = {
+            'INFLOW': ['SALES_IN', 'TOP_UP_IN', 'SETTLEMENT_CLEAR', 'OTHER'],
+            'OUTFLOW': ['PRIZE_PAYOUT', 'OPEX', 'TAX_PAY', 'BROKER_PAY', 'DIVIDEND_PAY', 'OTHER'],
+            'TRANSFER': ['TAX_TRANSFER', 'BROKER_TRANSFER', 'OTHER']
+        };
+
+        async function loadDropdowns() {
+            try {
+                // Load Bank Accounts
+                const accRes = await fetch('/settings/bank-accounts', { headers: { 'Accept': 'application/json' } });
+                const accounts = await accRes.json();
+
+                const fromSelect = document.getElementById('fromAccountSelect');
+                const toSelect = document.getElementById('toAccountSelect');
+
+                // Initial Option
+                const defaultOpt = '<option value="">-- เลือกบัญชี --</option>';
+                fromSelect.innerHTML = defaultOpt;
+                toSelect.innerHTML = defaultOpt;
+
+                accounts.forEach(acc => {
+                    const opt = `<option value="${acc.id}">${acc.bank_name} - ${acc.account_name} (${acc.type})</option>`;
+                    fromSelect.innerHTML += opt;
+                    toSelect.innerHTML += opt;
+                });
+
+                // Load Periods
+                const periodRes = await fetch('/periods', { headers: { 'Accept': 'application/json' } });
+                const periods = await periodRes.json();
+
+                const periodSelect = document.getElementById('periodSelect');
+                periodSelect.innerHTML = '<option value="">-- เลือกงวด --</option>';
+
+                periods.forEach(p => {
+                    const d = new Date(p.period_date).toLocaleDateString('th-TH');
+                    const status = p.status === 'LOCKED' ? '(LOCKED)' : '';
+                    periodSelect.innerHTML += `<option value="${p.id}">งวดวันที่ ${d} ${status}</option>`;
+                });
+
+            } catch (error) {
+                console.error('Error loading dropdowns', error);
+            }
+        }
+
+        function updateFormState() {
+            const type = document.getElementById('typeSelect').value;
+            const catSelect = document.getElementById('categorySelect');
+            const fromGroup = document.getElementById('fromAccountGroup');
+            const toGroup = document.getElementById('toAccountGroup');
+
+            // Update Categories
+            catSelect.innerHTML = '';
+            if (categories[type]) {
+                categories[type].forEach(c => {
+                    catSelect.innerHTML += `<option value="${c}">${c}</option>`;
+                });
+            }
+
+            // Toggle To Account
+            if (type === 'TRANSFER') {
+                toGroup.style.display = 'block';
+                fromGroup.querySelector('label').innerText = 'จากบัญชี (From)';
+            } else {
+                toGroup.style.display = 'none';
+                fromGroup.querySelector('label').innerText = 'บัญชีที่เกี่ยวข้อง';
+            }
+        }
+
+        function openAddModal() {
+            loadDropdowns();
+            updateFormState();
+            showModal('addTransactionModal');
+        }
+
+        function deleteTransaction(id) {
+            if (!confirm('ยืนยันการลบ?')) return;
+            fetch('/cashflow/' + id, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) location.reload();
+                    else alert(data.error);
+                });
+        }
+
+        document.getElementById('transactionForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            const data = Object.fromEntries(fd.entries());
+
+            try {
+                const res = await fetch('/cashflow', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (result.success) location.reload();
+                else alert(result.error);
+            } catch (err) {
+                console.error(err);
+                alert('Error connecting to server');
+            }
+        }
+
+        // Init
+        updateFormState();
+    </script>

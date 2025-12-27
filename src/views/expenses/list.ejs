@@ -36,10 +36,10 @@
                                 <%= exp.description %>
                             </td>
                             <td class="money lak">
-                                <%= exp.amount_lak %>
+                                <%= money.format(exp.amount_lak) %>
                             </td>
                             <td class="money thb">
-                                <%= exp.amount_thb %>
+                                <%= money.formatHtml(exp.amount_thb, 'THB' ) %>
                             </td>
                         </tr>
                         <% }) %>

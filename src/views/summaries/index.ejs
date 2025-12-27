@@ -1,17 +1,17 @@
-<div class="page-header">
-    <h1><i class="fas fa-chart-line"></i> ยอดขาย (Sales Summaries)</h1>
+<div class="header">
+    <h1>จัดการยอดขาย (Sales Management)</h1>
 </div>
 
 <div class="card">
     <div class="table-container">
-        <table class="data-table">
+        <table>
             <thead>
                 <tr>
-                    <th>งวดที่</th>
-                    <th>ประจำเดือน</th>
-                    <th>ยอดขายรวม (LAK)</th>
-                    <th>สถานะ</th>
-                    <th>จัดการ</th>
+                    <th>วันที่งวด</th>
+                    <th>ปี / เดือน</th>
+                    <th class="text-right">ยอดขายรวม (LAK)</th>
+                    <th class="text-center">สถานะ</th>
+                    <th class="text-center">จัดการ</th>
                 </tr>
             </thead>
             <tbody>
@@ -19,22 +19,22 @@
                     <% periods.forEach(period=> { %>
                         <tr>
                             <td>
-                                <%= period.period_date.getDate() %>
+                                <%= new Date(period.period_date).toLocaleDateString('th-TH', { year: 'numeric' ,
+                                    month: 'long' , day: 'numeric' }) %>
                             </td>
                             <td>
-                                <%= period.period_month %>/<%= period.period_year %>
+                                <%= period.period_year %> / <%= period.period_month %>
                             </td>
-                            <td class="text-right">
-                                <%= period.total_sales_lak ? period.total_sales_lak.toLocaleString('en-US',
-                                    {minimumFractionDigits: 2}) : '0.00' %>
+                            <td class="text-right" style="font-weight: bold; color: #2c3e50;">
+                                <%= money.format(period.gross_sales) %>
                             </td>
-                            <td>
+                            <td class="text-center">
                                 <span
-                                    class="badge <%= period.status === 'OPEN' ? 'badge-success' : 'badge-secondary' %>">
+                                    class="status-badge <%= period.status === 'OPEN' ? 'status-open' : 'status-locked' %>">
                                     <%= period.status %>
                                 </span>
                             </td>
-                            <td>
+                            <td class="text-center">
                                 <a href="/summaries/<%= period.id %>" class="btn btn-sm btn-primary">
                                     <i class="fas fa-edit"></i> บันทึกยอด
                                 </a>
@@ -43,7 +43,7 @@
                         <% }); %>
                             <% } else { %>
                                 <tr>
-                                    <td colspan="5" class="text-center">ไม่พบข้อมูล</td>
+                                    <td colspan="5" class="text-center text-muted">ไม่พบข้อมูล</td>
                                 </tr>
                                 <% } %>
             </tbody>

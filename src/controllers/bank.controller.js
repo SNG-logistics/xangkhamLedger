@@ -26,23 +26,23 @@ const bankController = {
         try {
             const periodId = req.params.periodId;
             const banks = await Bank.findByPeriod(periodId);
-            res.render('banks/form', { periodId, banks });
+            const masterAccounts = await require('../models/bank_account.model').findActive();
+            res.render('banks/form', { periodId, banks, masterAccounts });
         } catch (error) {
             console.error(error);
-            res.status(500).send('Error loading bank form');
+            res.status(500).send(`Error loading bank form: ${error.message}<br><pre>${error.stack}</pre>`);
         }
     },
 
     create: async (req, res) => {
         try {
-            const { period_id, bank_name, bank_account, balance_lak, balance_thb, notes } = req.body;
+            const { period_id, bank_name, bank_account, balance_lak, notes } = req.body;
 
             const bankId = await Bank.create(
                 period_id,
                 bank_name,
                 bank_account,
                 balance_lak || 0,
-                balance_thb || 0,
                 notes,
                 req.session.userId
             );
@@ -53,7 +53,7 @@ const bankController = {
                 'bank_balances',
                 bankId,
                 null,
-                { bank_name, balance_lak, balance_thb },
+                { bank_name, balance_lak },
                 null,
                 req.ip,
                 req.get('User-Agent')
@@ -68,9 +68,9 @@ const bankController = {
 
     update: async (req, res) => {
         try {
-            const { id, bank_account, balance_lak, balance_thb, notes, period_id } = req.body;
+            const { id, bank_account, balance_lak, notes, period_id } = req.body;
 
-            await Bank.update(id, bank_account, balance_lak || 0, balance_thb || 0, notes);
+            await Bank.update(id, bank_account, balance_lak || 0, notes);
 
             await audit.log(
                 req.session.userId,
@@ -78,7 +78,7 @@ const bankController = {
                 'bank_balances',
                 id,
                 null,
-                { balance_lak, balance_thb },
+                { balance_lak },
                 null,
                 req.ip,
                 req.get('User-Agent')
@@ -94,6 +94,11 @@ const bankController = {
     delete: async (req, res) => {
         try {
             const { id } = req.params;
+            const { reason } = req.body; // Expect JSON body with reason
+
+            // Optional: You might want to enforce reason for balance deletion too, 
+            // though user request was for Bank Account (Master). 
+            // Since we added the modal here too, let's log it.
 
             await Bank.delete(id);
 
@@ -104,7 +109,7 @@ const bankController = {
                 id,
                 null,
                 null,
-                null,
+                reason || null, // Create log with reason
                 req.ip,
                 req.get('User-Agent')
             );

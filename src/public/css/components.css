@@ -196,6 +196,27 @@ table tbody tr:hover {
     color: #f39c12;
 }
 
+/* Text Colors */
+.text-success {
+    color: #27ae60;
+}
+
+.text-danger {
+    color: #e74c3c;
+}
+
+.text-warning {
+    color: #f39c12;
+}
+
+.text-primary {
+    color: #3498db;
+}
+
+.text-muted {
+    color: #7f8c8d;
+}
+
 /* Alert Banners */
 .alert {
     padding: 15px 20px;

@@ -8,7 +8,7 @@ const summaryController = {
     index: async (req, res) => {
         try {
             const periods = await require('../models/period.model').findAll();
-            res.render('summaries/index', { periods });
+            res.render('summaries/index', { periods, money: require('../utils/money') });
         } catch (error) {
             console.error(error);
             res.status(500).send('Error loading summaries');

@@ -1,97 +1,228 @@
 <!-- FILE: src/views/periods/list.ejs -->
-<div class="period-list-actions">
-    <h3>รายการงวดทั้งหมด</h3>
-    <button class="btn btn-primary" onclick="showModal('createPeriodModal')">สร้างงวดใหม่</button>
-</div>
-
-<div class="card">
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>วันที่งวด</th>
-                    <th>ปี</th>
-                    <th>เดือน</th>
-                    <th>เวลาออก</th>
-                    <th>ยอดสรุป</th>
-                    <th>สถานะ</th>
-                    <th>LOCK โดย</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <% periods.forEach(period=> { %>
-                    <tr>
-                        <td>
-                            <%= new Date(period.period_date).toLocaleDateString('th-TH', { year: 'numeric' ,
-                                month: 'long' , day: 'numeric' }) %>
-                        </td>
-                        <td>
-                            <%= period.period_year %>
-                        </td>
-                        <td>
-                            <%= period.period_month %>
-                        </td>
-                        <td>
-                            <%= period.draw_time %>
-                        </td>
-                        <td>
-                            <% const net_profit=(parseFloat(period.gross_sales) || 0) - (parseFloat(period.total_prizes)
-                                || 0) - (parseFloat(period.total_expenses) || 0); %>
-                                <span style="font-weight: bold; color: <%= net_profit >= 0 ? '#2ecc71' : '#e74c3c' %>">
-                                    <%= money.format(net_profit) %>
-                                </span>
-                        </td>
-                        <td>
-                            <span
-                                class="status-badge <%= period.status === 'LOCKED' ? 'status-locked' : 'status-open' %>">
-                                <%= period.status %>
-                            </span>
-                        </td>
-                        <td>
-                            <%= period.locked_by_username || '-' %>
-                        </td>
-                        <td>
-                            <a href="/periods/<%= period.id %>" class="btn btn-secondary">ดูรายละเอียด</a>
-                            <button class="btn-icon delete" onclick="deletePeriod('<%= period.id %>')" title="ลบงวด"
-                                style="margin-left: 5px; background: none; border: none; cursor: pointer;">
-                                🗑️
-                            </button>
-
-                        </td>
-                    </tr>
-                    <% }) %>
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Create Period Modal -->
-<div id="createPeriodModal" class="modal-overlay">
-    <div class="modal-box">
-        <h3>สร้างงวดใหม่</h3>
-        <form method="POST" action="/periods/create">
-            <div class="form-group">
-                <label>วันที่งวด</label>
-                <input type="date" name="period_date" class="form-control" required onchange="validateDay(this)">
-                <small class="text-muted" style="color: #6c757d; display: block; margin-top: 5px;">* เลือกได้เฉพาะ
-                    จันทร์, พุธ, ศุกร์</small>
+<div class="header">
+    <h1>All Periods</h1>
+    <div class="actions">
+        <!-- Backfill Toggle -->
+        <% if (user && user.role==='SUPER_ADMIN' ) { %>
+            <div style="display: inline-block; margin-right: 20px;">
+                <label class="switch">
+                    <input type="checkbox" id="backfillToggle" <%=backfillMode ? 'checked' : '' %>
+                    onchange="toggleBackfill()">
+                    <span class="slider round"></span>
+                </label>
+                <span style="font-weight: bold; margin-left: 5px;">Backfill Mode</span>
             </div>
-            <script>
-                function validateDay(input) {
-                    const date = new Date(input.value);
-                    const day = date.getDay();
-                    if (![1, 3, 5].includes(day)) {
-                        alert('เลือกได้เฉพาะวัน จันทร์, พุธ, ศุกร์ เท่านั้น');
-                        input.value = '';
+            <% } %>
+
+                <% if (backfillMode) { %>
+                    <button class="btn btn-warning" onclick="showModal('createPeriodModal')">+ New Period
+                        (Backfill)</button>
+                    <% } else { %>
+                        <button class="btn btn-primary" onclick="showModal('createPeriodModal')">+ New Period</button>
+                        <% } %>
+    </div>
+</div>
+
+<% if (backfillMode) { %>
+    <div class="alert alert-warning" style="margin-bottom: 20px; text-align: center;">
+        <strong>⚠️ BACKFILL MODE ACTIVE</strong><br>
+        You can create past periods. Ensure you lock them in chronological order.
+    </div>
+    <% } %>
+
+        <div class="card">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>วันที่งวด</th>
+                            <th>ปี</th>
+                            <th>เดือน</th>
+                            <th>เวลาออก</th>
+                            <th>ยอดสรุป</th>
+                            <th>สถานะ</th>
+                            <th>LOCK โดย</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% periods.forEach(period=> { %>
+                            <tr>
+                                <td>
+                                    <%= new Date(period.period_date).toLocaleDateString('th-TH', { year: 'numeric' ,
+                                        month: 'long' , day: 'numeric' }) %>
+                                </td>
+                                <td>
+                                    <%= period.period_year %>
+                                </td>
+                                <td>
+                                    <%= period.period_month %>
+                                </td>
+                                <td>
+                                    <%= period.draw_time %>
+                                </td>
+                                <td>
+                                    <% const net_profit=(parseFloat(period.gross_sales) || 0) -
+                                        (parseFloat(period.total_prizes) || 0) - (parseFloat(period.total_expenses) ||
+                                        0); %>
+                                        <span
+                                            style="font-weight: bold; color: <%= net_profit >= 0 ? '#2ecc71' : '#e74c3c' %>">
+                                            <%= money.format(net_profit) %>
+                                        </span>
+                                </td>
+                                <td>
+                                    <span
+                                        class="status-badge <%= period.status === 'LOCKED' ? 'status-locked' : 'status-open' %>">
+                                        <%= period.status %>
+                                    </span>
+                                </td>
+                                <td>
+                                    <%= period.locked_by_username || '-' %>
+                                </td>
+                                <td>
+                                    <a href="/periods/<%= period.id %>" class="btn btn-secondary">ดูรายละเอียด</a>
+                                    <% if (user && user.role==='SUPER_ADMIN' ) { %>
+                                        <% if (period.status==='OPEN' ) { %>
+                                            <button class="btn btn-warning"
+                                                onclick="openActionModal('<%= period.id %>', 'lock')">🔒 Lock</button>
+                                            <% } else { %>
+                                                <button class="btn btn-success"
+                                                    onclick="openActionModal('<%= period.id %>', 'unlock')">🔓
+                                                    Unlock</button>
+                                                <% } %>
+                                                    <button class="btn-icon delete"
+                                                        onclick="deletePeriod('<%= period.id %>')" title="ลบงวด"
+                                                        style="margin-left: 5px; background: none; border: none; cursor: pointer;">
+                                                        🗑️
+                                                    </button>
+                                                    <a href="/periods/<%= period.id %>?action=new_incident"
+                                                        class="btn btn-warning"
+                                                        style="margin-left: 5px; text-decoration: none;">
+                                                        ⚠️ แจ้งเคส
+                                                    </a>
+                                                    <% } %>
+                                </td>
+                            </tr>
+                            <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Lock/Unlock Modal -->
+        <div id="actionModal" class="modal-overlay">
+            <div class="modal-box">
+                <h3 id="actionModalTitle">Update Period Status</h3>
+                <div class="form-group">
+                    <label>เหตุผล (Reason)</label>
+                    <textarea id="actionReason" class="form-control" rows="3" placeholder="ระบุเหตุผล..."></textarea>
+                </div>
+                <div class="form-group" id="overrideGroup"
+                    style="display:none; background: #ffebee; padding: 10px; border-left: 4px solid #f44336;">
+                    <label style="color: #c62828; font-weight: bold;">⚠️ Net Cash Warning</label>
+                    <p id="netCashErrorMsg" style="font-size: 0.9em; margin-bottom: 5px; color: #b71c1c;"></p>
+                    <label>
+                        <input type="checkbox" id="forceOverride"> ยืนยันการ Lock (Override)
+                    </label>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('actionModal')">ยกเลิก</button>
+                    <button type="button" class="btn btn-primary" onclick="submitAction()">ยืนยัน</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            let currentPeriodId = null;
+            let currentAction = null; // 'lock' or 'unlock'
+
+            function openActionModal(id, action) {
+                currentPeriodId = id;
+                currentAction = action;
+
+                // Reset state
+                document.getElementById('actionModalTitle').innerText = action === 'lock' ? 'ยืนยันการ Locked' : 'ยืนยันการ Unlock';
+                document.getElementById('actionReason').value = '';
+                document.getElementById('overrideGroup').style.display = 'none';
+                document.getElementById('forceOverride').checked = false;
+
+                showModal('actionModal');
+            }
+
+            async function submitAction() {
+                const reason = document.getElementById('actionReason').value;
+                const forceOverride = document.getElementById('forceOverride').checked;
+
+                if (!reason && !confirm('ดำเนินการต่อโดยไม่ระบุเหตุผล?')) return;
+
+                try {
+                    const res = await fetch(`/periods/${currentPeriodId}/${currentAction}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reason, forceOverride })
+                    });
+
+                    const data = await res.json();
+
+                    if (data.success) {
+                        location.reload();
+                    } else if (data.requiresOverride) {
+                        // Show Override UI
+                        document.getElementById('overrideGroup').style.display = 'block';
+                        document.getElementById('netCashErrorMsg').innerText = data.error;
+                    } else {
+                        alert(data.error);
                     }
+                } catch (error) {
+                    console.error(error);
+                    alert('Error processing request');
                 }
-            </script>
-    </div>
-    <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="hideModal('createPeriodModal')">ยกเลิก</button>
-        <button type="submit" class="btn btn-primary">สร้าง</button>
-    </div>
-    </form>
-</div>
-</div>
+            }
+
+            async function toggleBackfill() {
+                try {
+                    const res = await fetch('/periods/toggle-backfill', { method: 'POST' });
+                    const data = await res.json();
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error toggling backfill mode');
+                    }
+                } catch (error) {
+                    console.error(error);
+                    alert('Error connecting to server');
+                }
+            }
+        </script>
+
+        <!-- Create Period Modal -->
+        <div id="createPeriodModal" class="modal-overlay">
+            <div class="modal-box">
+                <h3>สร้างงวดใหม่</h3>
+                <form method="POST" action="/periods/create">
+                    <div class="form-group">
+                        <label>วันที่งวด</label>
+                        <input type="date" name="period_date" class="form-control" required
+                            onchange="validateDay(this)">
+                        <small class="text-muted" style="color: #6c757d; display: block; margin-top: 5px;">*
+                            เลือกได้เฉพาะ
+                            จันทร์, พุธ, ศุกร์</small>
+                    </div>
+                    <script>
+                        function validateDay(input) {
+                            const date = new Date(input.value);
+                            const day = date.getDay();
+                            if (![1, 3, 5].includes(day)) {
+                                alert('เลือกได้เฉพาะวัน จันทร์, พุธ, ศุกร์ เท่านั้น');
+                                input.value = '';
+                            }
+                        }
+                    </script>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary"
+                            onclick="hideModal('createPeriodModal')">ยกเลิก</button>
+                        <button type="submit" class="btn btn-primary">สร้าง</button>
+                    </div>
+                </form>
+            </div>
+        </div>

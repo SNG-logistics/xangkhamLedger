@@ -16,12 +16,13 @@
         padding: 0 !important;
     }
 
-    /* Hide UI Elements */
+    /* Hide UI Elements & Redundant Headers */
     .sidebar,
     .header,
     .no-print,
     .btn,
-    .page-header button {
+    .page-header,
+    .report-header:not(:first-of-type) {
         display: none !important;
     }
 
@@ -104,78 +105,4 @@
         background-color: #f1f8e9 !important;
         /* Light Green Tint */
         font-weight: bold;
-        border-top: 2px solid #2e7d32;
-        color: #2e7d32;
-        font-size: 12pt;
-    }
-
-    /* Amounts Alignment */
-    .text-right {
-        text-align: right !important;
-    }
-
-    .text-center {
-        text-align: center !important;
-    }
-
-    /* Specific Sections */
-    .expense-section {
-        margin-top: 30px;
-        page-break-inside: avoid;
-    }
-
-    .bank-section {
-        margin-top: 30px;
-        /* Push to bottom */
-        page-break-inside: avoid;
-        border: 1px solid #eee;
-        border-radius: 8px;
-        padding: 15px;
-        background: #fafafa;
-    }
-
-    /* Row Colors for Expenses */
-    tr.row-pay-pro td {
-        background-color: #ffcdd2 !important;
-        /* Red 100 */
-        color: #b71c1c !important;
-        /* Red 900 */
-        font-weight: bold !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-        border-bottom: 1px solid #ef9a9a !important;
-    }
-
-    tr.row-pay-general td {
-        background-color: #ffffff !important;
-        /* White */
-        color: #2c3e50 !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-
-    tr.row-pay-other td {
-        background-color: #f5f5f5 !important;
-        /* Light Grey */
-        color: #616161 !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-
-    tr.row-highlight td {
-        background-color: #e8f5e9 !important;
-        /* Green 50 */
-        font-weight: bold !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-        border-top: 2px solid #a5d6a7 !important;
-        border-bottom: 2px solid #a5d6a7 !important;
-    }
-
-    .badge {
-        border: 1px solid #ccc;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 0.8em;
-    }
-}
+        border-top: 2px solid #2e7d3

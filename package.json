@@ -1,5 +1,5 @@
 {
-  "name": "xangkham-ledger",
+  "name": "changkhum-ledger",
   "version": "1.1.0",
   "description": "XANGKHAM Ledger - Lottery Accounting System for Legal Lottery Business in Laos",
   "main": "src/server.js",
