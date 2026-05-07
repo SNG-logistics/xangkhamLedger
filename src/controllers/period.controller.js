@@ -443,26 +443,28 @@ const periodController = {
             }
 
             const prompt = `
-            You are an expert financial accountant. Please analyze this ledger/account summary image.
-            Extract all expense categories and their corresponding amounts in LAK. Pay close attention to Thai/Lao text and any negative values or deductions.
-            Also, identify if there is a 'Promotion' summary or category.
+            คุณเป็นนักบัญชีผู้เชี่ยวชาญ กรุณาวิเคราะห์รูปภาพสรุปบัญชี/รายจ่ายนี้
             
-            CRITICAL JSON RULES:
-            1. DO NOT use literal newlines inside string values. Replace with space.
-            2. DO NOT use unescaped double quotes inside string values. Remove them or use single quotes.
-            3. Ensure the JSON is perfectly valid and complete.
+            สิ่งที่ต้องดึงออกมา:
+            1. ชื่อหมวดหมู่รายจ่ายและจำนวนเงิน (LAK)
+            2. QUAN สำคัญ: ให้ใช้ข้อความในรูปตรงๆ เป็นชื่อ category — ห้ามแปลเป็นภาษาอังกฤษ ให้ใช้ภาษาไทย/ลาว ตามที่เห็นในรูป
+            3. หากมีส่วน 'โปรโมชั่น' หรือ 'Promotion' ให้รวมยอดด้วย
             
-            Return the response ONLY as a valid JSON object with the following structure:
+            กฎ JSON ที่ต้องปฏิบัติ:
+            1. ห้ามมี newline ภายใน string value — ให้ใช้ space แทน
+            2. ห้ามมี double quote ที่ไม่ได้ escape ภายใน string value
+            3. JSON ต้องถูกต้องสมบูรณ์
+            
+            ตอบกลับเป็น JSON เท่านั้น ไม่ต้องมี markdown:
             {
               "items": [
-                {"category": "Name of expense", "amount_lak": 100000}
+                {"category": "ชื่อหมวดหมู่ตามในรูป (ภาษาไทย/ลาว)", "amount_lak": 100000}
               ],
               "promotions": {
                 "total_promotions_lak": 50000,
-                "details": "Optional text"
+                "details": "ข้อความเพิ่มเติม (ถ้ามี)"
               }
             }
-            Do not include any markdown formatting. Just the raw JSON text.
             `;
 
             const payload = {
