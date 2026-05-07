@@ -16,5 +16,7 @@ router.post('/:id/balances', auth.requireAuth, rbac.canModifyPeriod, periodContr
 router.post('/:id/incidents', auth.requireAuth, periodController.createIncident);
 router.post('/:id/incidents/:incidentId/resolve', auth.requireSuperAdmin, periodController.resolveIncident);
 router.delete('/:id', auth.requireSuperAdmin, periodController.delete);
+router.post('/:id/reconcile', auth.requireAdmin, periodController.reconcileImage);
+router.post('/:id/expenses/quick-add', auth.requireAdmin, rbac.canModifyPeriod, periodController.quickAddExpense);
 
 module.exports = router;

@@ -401,6 +401,238 @@ const periodController = {
             console.error(error);
             res.status(500).json({ error: 'Error resolving incident' });
         }
+    },
+
+    reconcileImage: async (req, res) => {
+        try {
+            const periodId = req.params.id;
+            if (!req.files || !req.files.receiptImage) {
+                return res.status(400).json({ error: 'กรุณาอัปโหลดรูปภาพ' });
+            }
+
+            const imageFile = req.files.receiptImage;
+            const base64Image = imageFile.data.toString('base64');
+            
+            const axios = require('axios');
+            const apiKey = process.env.COMET_API_KEY;
+            const baseUrl = process.env.AI_VISION_BASE_URL || 'https://api.cometapi.com/v1';
+            const model = process.env.AI_VISION_MODEL || 'gemini-3-flash';
+
+            if (!apiKey) {
+                return res.status(500).json({ error: "COMET_API_KEY is not configured" });
+            }
+
+            const prompt = `
+            You are an expert financial accountant. Please analyze this ledger/account summary image.
+            Extract all expense categories and their corresponding amounts in LAK. Pay close attention to Thai/Lao text and any negative values or deductions.
+            Also, identify if there is a 'Promotion' summary or category.
+            
+            CRITICAL JSON RULES:
+            1. DO NOT use literal newlines inside string values. Replace with space.
+            2. DO NOT use unescaped double quotes inside string values. Remove them or use single quotes.
+            3. Ensure the JSON is perfectly valid and complete.
+            
+            Return the response ONLY as a valid JSON object with the following structure:
+            {
+              "items": [
+                {"category": "Name of expense", "amount_lak": 100000}
+              ],
+              "promotions": {
+                "total_promotions_lak": 50000,
+                "details": "Optional text"
+              }
+            }
+            Do not include any markdown formatting. Just the raw JSON text.
+            `;
+
+            const payload = {
+                model: model,
+                messages: [
+                    {
+                        role: "user",
+                        content: [
+                            { type: "text", text: prompt },
+                            { type: "image_url", image_url: { url: `data:${imageFile.mimetype};base64,${base64Image}` } }
+                        ]
+                    }
+                ],
+                max_tokens: parseInt(process.env.AI_VISION_MAX_TOKENS || '2048'),
+                temperature: 0.1
+            };
+
+            const response = await axios.post(`${baseUrl}/chat/completions`, payload, {
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 60000
+            });
+
+            let content = response.data.choices[0].message.content || "";
+            content = content.trim();
+            
+            let imageData;
+            try {
+                // Safely extract JSON using regex in case AI adds conversational text
+                const jsonMatch = content.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    let jsonString = jsonMatch[0];
+                    // Strip literal control characters that break JSON
+                    jsonString = jsonString.replace(/[\u0000-\u001F]+/g, " ");
+                    imageData = JSON.parse(jsonString);
+                } else {
+                    throw new Error("No JSON object found in response");
+                }
+            } catch (err) {
+                console.error("Failed to parse JSON. Raw AI response:", content);
+                return res.status(500).json({ 
+                    error: "AI ส่งข้อมูล JSON กลับมาไม่สมบูรณ์ (รูปแบบผิดพลาด) โปรดลองใหม่อีกครั้ง\nข้อมูลที่ได้:\n" + content.substring(0, 1000) 
+                });
+            }
+
+            // Get System Expenses
+            const expenses = await Expense.findByPeriod(periodId);
+            const systemSummary = {};
+            let systemPromotions = 0;
+            
+            expenses.forEach(exp => {
+                const cat = exp.category || 'Unknown';
+                const amount = parseFloat(exp.amount_lak) || 0;
+                
+                if (cat.toUpperCase().includes('PROMOTION') || cat.includes('โปรโมชั่น') || cat.includes('โปรโมชัน') || cat.includes('โปร')) {
+                    systemPromotions += amount;
+                } else {
+                    systemSummary[cat] = (systemSummary[cat] || 0) + amount;
+                }
+            });
+
+            const missingInSystem = [];
+            const discrepancies = [];
+            const matched = [];
+            const systemChecked = new Set();
+            const imageItems = imageData.items || [];
+
+            // Keywords that indicate prize/reward payouts — already factored into the period formula
+            // (gross_sales - total_prizes), so we must NOT flag these as missing expenses.
+            const PRIZE_KEYWORDS = [
+                'prize', 'reward', 'รางวัล', 'ถูกรางวัล', 'jackpot', 'payout',
+                'winnings', 'ชนะ', 'เงินรางวัล', 'winning'
+            ];
+            const isPrizeItem = (cat) => PRIZE_KEYWORDS.some(kw => cat.toLowerCase().includes(kw.toLowerCase()));
+            
+            imageItems.forEach(item => {
+                const cat = item.category || 'Unknown';
+                const amount = parseFloat(item.amount_lak) || 0;
+
+                // Skip prize-related items — they are already deducted in the period summary
+                if (isPrizeItem(cat)) {
+                    matched.push({ category: cat + ' (ยอดถูกรางวัล — คำนวณแล้วในสูตร)', amount: amount });
+                    return;
+                }
+                
+                let matchedSysCat = null;
+                for (const sysCat of Object.keys(systemSummary)) {
+                    if (sysCat.toLowerCase().includes(cat.toLowerCase()) || cat.toLowerCase().includes(sysCat.toLowerCase())) {
+                        matchedSysCat = sysCat;
+                        break;
+                    }
+                }
+
+                if (matchedSysCat) {
+                    systemChecked.add(matchedSysCat);
+                    const sysAmount = systemSummary[matchedSysCat];
+                    const diff = amount - sysAmount;
+                    
+                    if (Math.abs(diff) > 0.01) {
+                        discrepancies.push({ category: cat, image_amount: amount, system_amount: sysAmount, difference: diff });
+                    } else {
+                        matched.push({ category: cat, amount: amount });
+                    }
+                } else {
+                    missingInSystem.push({ category: cat, amount: amount });
+                }
+            });
+
+            const missingInImage = [];
+            for (const [sysCat, sysAmount] of Object.entries(systemSummary)) {
+                if (!systemChecked.has(sysCat)) {
+                    missingInImage.push({ category: sysCat, system_amount: sysAmount });
+                }
+            }
+
+            const imgPromoTotal = parseFloat(imageData.promotions?.total_promotions_lak || 0);
+            const promoDiff = imgPromoTotal - systemPromotions;
+
+            res.json({
+                success: true,
+                results: {
+                    missingInSystem,
+                    missingInImage,
+                    discrepancies,
+                    matched,
+                    promotions: {
+                        image_total: imgPromoTotal,
+                        system_total: systemPromotions,
+                        difference: promoDiff,
+                        needs_cross_day_check: promoDiff > 0
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error('Reconciliation Error:', error);
+            res.status(500).json({ error: error.message });
+        }
+    },
+
+    quickAddExpense: async (req, res) => {
+        try {
+            const periodId = req.params.id;
+            const { category, amount_lak, description } = req.body;
+
+            const period = await Period.findById(periodId);
+            if (!period) return res.status(404).json({ error: 'Period not found' });
+            if (period.status === 'LOCKED') return res.status(400).json({ error: 'Period is Locked' });
+
+            // Create expense with current period date
+            // occurred_at = period.period_date (set to e.g. 12:00:00 to avoid timezone issues)
+            const occurred_at = new Date(period.period_date).toISOString().split('T')[0] + ' 12:00:00';
+
+            const expenseId = await Expense.create(
+                occurred_at,
+                periodId,
+                category,
+                description || 'เพิ่มจากระบบตรวจบิล AI',
+                parseFloat(amount_lak) || 0,
+                0, // amount_thb
+                [], // no file paths
+                req.session.userId
+            );
+
+            // Trigger real-time dashboard update if needed
+            if (req.io) {
+                const periods = await Period.findAll();
+                const history = periods.slice(0, 10).map(p => {
+                    const profit = (parseFloat(p.gross_sales) || 0) - (parseFloat(p.total_prizes) || 0) - (parseFloat(p.total_expenses) || 0);
+                    return {
+                        period_date: new Date(p.period_date).toLocaleDateString('th-TH', { day: '2-digit', month: 'short' }),
+                        net_profit: profit
+                    };
+                }).reverse();
+                
+                req.io.emit('dashboard:update', {
+                    totalPeriods: periods.length,
+                    openPeriods: periods.filter(p => p.status === 'OPEN').length,
+                    lockedPeriods: periods.filter(p => p.status === 'LOCKED').length,
+                    history
+                });
+            }
+
+            res.json({ success: true, message: 'เพิ่มรายการสำเร็จ' });
+        } catch (error) {
+            console.error('Quick Add Expense Error:', error);
+            res.status(500).json({ error: 'Error adding expense: ' + error.message });
+        }
     }
 };
 

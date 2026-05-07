@@ -124,31 +124,31 @@
           <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
           <script src="/js/ui.js"></script>
 
+          <% if (locals.flash) { %>
           <script>
             // Check for server-side flash messages
-            <% if (locals.flash) { %>
-              document.addEventListener('DOMContentLoaded', function () {
-                const type = '<%= locals.flash.type %>'; // success, error, warning, info
-                const message = '<%= locals.flash.message %>';
+            document.addEventListener('DOMContentLoaded', function () {
+              const type = '<%- locals.flash.type %>'; // success, error, warning, info
+              const message = '<%- locals.flash.message %>';
 
-                // Use the custom Toast function from ui.js (which we will add next)
-                if (typeof showToast === 'function') {
-                  showToast(type, message);
-                } else {
-                  // Fallback if ui.js not loaded yet or error
-                  Swal.fire({
-                    icon: type,
-                    title: message,
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    timerProgressBar: true
-                  });
-                }
-              });
-            <% } %>
+              // Use the custom Toast function from ui.js (which we will add next)
+              if (typeof showToast === 'function') {
+                showToast(type, message);
+              } else {
+                // Fallback if ui.js not loaded yet or error
+                Swal.fire({
+                  icon: type,
+                  title: message,
+                  toast: true,
+                  position: 'top-end',
+                  showConfirmButton: false,
+                  timer: 3000,
+                  timerProgressBar: true
+                });
+              }
+            });
           </script>
+          <% } %>
 </body>
 
 </html>

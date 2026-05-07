@@ -91,6 +91,7 @@ app.use('/audit', auditRoutes);
 app.use('/settings/bank-accounts', require('./routes/bank_account.routes'));
 app.use('/cashflow', require('./routes/cashflow.routes'));
 app.use('/users', require('./routes/user.routes'));
+app.use('/reconciliation', require('./routes/reconciliation.routes'));
 
 // Dashboard
 const Period = require('./models/period.model');

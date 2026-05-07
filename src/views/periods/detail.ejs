@@ -79,6 +79,9 @@
                             <% } %>
                                 <a href="/reports/period/<%= period.id %>" class="btn btn-primary">📊 รายงานงวดนี้</a>
                                 <button class="btn btn-warning" onclick="showModal('incidentModal')">⚠️ แจ้งเคส</button>
+                                <% if (['SUPER_ADMIN', 'ADMIN', 'CEO'].includes(user.role)) { %>
+                                <button class="btn" style="background-color: #8e44ad; color: white;" onclick="showModal('reconcileModal')">🤖 AI ตรวจสอบบิล</button>
+                                <% } %>
                 </div>
 
                 <!-- Sales Summary -->
@@ -369,6 +372,326 @@
                             </div>
                         </div>
 
+                        <!-- AI Reconcile Modal — Premium Design -->
+                        <div id="reconcileModal" class="modal-overlay">
+                            <div class="recon-modal-box">
+
+                                <!-- Header -->
+                                <div class="recon-header">
+                                    <div class="recon-header-left">
+                                        <div class="recon-icon-ring">
+                                            <i class="fas fa-robot"></i>
+                                        </div>
+                                        <div>
+                                            <h2 class="recon-title">AI ตรวจสอบบิล</h2>
+                                            <p class="recon-subtitle">กระทบยอดอัตโนมัติด้วยปัญญาประดิษฐ์</p>
+                                        </div>
+                                    </div>
+                                    <button class="recon-close-btn" onclick="hideModal('reconcileModal')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Upload Zone -->
+                                <div class="recon-upload-zone" id="reconUploadZone">
+                                    <form id="reconcileForm" onsubmit="submitReconcile(event)">
+                                        <label for="reconcileImage" class="recon-drop-label" id="reconDropLabel">
+                                            <div class="recon-drop-icon">
+                                                <i class="fas fa-cloud-upload-alt"></i>
+                                            </div>
+                                            <p class="recon-drop-text">วางหรือคลิกเพื่อเลือกรูปบิล / สรุปยอด</p>
+                                            <p class="recon-drop-hint">รองรับ JPG, PNG, WEBP</p>
+                                            <input type="file" id="reconcileImage" name="receiptImage" accept="image/*" required style="display:none;" onchange="handleReconFileSelect(this)">
+                                        </label>
+                                        <div id="reconFilePreview" style="display:none;" class="recon-file-preview">
+                                            <i class="fas fa-check-circle" style="color:#4ade80;"></i>
+                                            <span id="reconFileName" style="margin-left:8px;"></span>
+                                            <button type="button" class="recon-clear-file" onclick="clearReconFile()"><i class="fas fa-times"></i></button>
+                                        </div>
+                                        <div class="recon-actions">
+                                            <button type="button" class="recon-btn-cancel" onclick="hideModal('reconcileModal')">
+                                                ยกเลิก
+                                            </button>
+                                            <button type="submit" class="recon-btn-submit" id="reconcileBtn">
+                                                <i class="fas fa-search-dollar"></i> เริ่มตรวจสอบ
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <!-- Recheck Bar (shown after first analysis instead of upload zone) -->
+                                <div id="reconRecheckBar" style="display:none; align-items:center; justify-content:space-between; padding: 12px 28px; background: rgba(139,92,246,0.08); border-bottom: 1px solid rgba(139,92,246,0.15);">
+                                    <span style="font-size:0.82rem; color:rgba(255,255,255,0.5);">
+                                        <i class="fas fa-history" style="margin-right:6px;"></i>แสดงผลการตรวจล่าสุด
+                                    </span>
+                                    <button type="button" class="recon-btn-recheck" onclick="showRecheckUpload()">
+                                        <i class="fas fa-redo"></i> ตรวจซ้ำ (อัพโหลดรูปใหม่)
+                                    </button>
+                                </div>
+
+                                <!-- Results Area -->
+                                <div id="reconcileResults" style="display: none;" class="recon-results">
+
+                                    <div class="recon-results-header">
+                                        <span class="recon-results-title">📊 ผลการวิเคราะห์</span>
+                                        <button type="button" class="recon-btn-recheck" onclick="document.getElementById('reconcileImage').value=''; document.getElementById('reconFilePreview').style.display='none'; document.getElementById('reconDropLabel').style.display='flex'; document.getElementById('reconcileBtn').innerHTML='<i class=\'fas fa-search-dollar\'></i> เริ่มตรวจสอบ'; document.getElementById('reconcileBtn').disabled=false; document.getElementById('reconcileResults').style.display='none';">
+                                            <i class="fas fa-redo"></i> ตรวจใหม่
+                                        </button>
+                                    </div>
+
+                                    <div class="recon-grid">
+                                        <!-- Missing in System -->
+                                        <div class="recon-card recon-card-danger">
+                                            <div class="recon-card-header">
+                                                <span class="recon-card-dot dot-danger"></span>
+                                                ตกหล่นในระบบ
+                                                <span class="recon-card-badge" id="badgeMissingSys">0</span>
+                                            </div>
+                                            <div class="recon-card-body" id="resMissingSystem"></div>
+                                        </div>
+
+                                        <!-- Missing in Image -->
+                                        <div class="recon-card recon-card-warning">
+                                            <div class="recon-card-header">
+                                                <span class="recon-card-dot dot-warning"></span>
+                                                ตกหล่นในรูป
+                                                <span class="recon-card-badge" id="badgeMissingImg">0</span>
+                                            </div>
+                                            <div class="recon-card-body" id="resMissingImage"></div>
+                                        </div>
+
+                                        <!-- Discrepancies (full width) -->
+                                        <div class="recon-card recon-card-info recon-card-full">
+                                            <div class="recon-card-header">
+                                                <span class="recon-card-dot dot-info"></span>
+                                                ยอดเงินไม่ตรง
+                                                <span class="recon-card-badge" id="badgeDisc">0</span>
+                                            </div>
+                                            <div class="recon-card-body" id="resDiscrepancies"></div>
+                                        </div>
+
+                                        <!-- Promotions -->
+                                        <div class="recon-card recon-card-promo recon-card-full">
+                                            <div class="recon-card-header">
+                                                <span class="recon-card-dot dot-promo"></span>
+                                                ยอดโปรโมชั่น
+                                            </div>
+                                            <div class="recon-card-body" id="resPromotions"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <style>
+                            /* ===================== RECON MODAL — PREMIUM ===================== */
+                            .recon-modal-box {
+                                background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+                                border: 1px solid rgba(255,255,255,0.08);
+                                border-radius: 24px;
+                                padding: 0;
+                                width: 92%;
+                                max-width: 860px;
+                                margin: 4vh auto;
+                                box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(139,92,246,0.15);
+                                overflow: hidden;
+                                animation: reconSlideIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+                            }
+                            @keyframes reconSlideIn {
+                                from { opacity: 0; transform: translateY(-28px) scale(0.97); }
+                                to   { opacity: 1; transform: translateY(0) scale(1); }
+                            }
+
+                            /* Header */
+                            .recon-header {
+                                display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                                padding: 24px 28px 20px;
+                                background: linear-gradient(90deg, rgba(139,92,246,0.2) 0%, rgba(59,130,246,0.1) 100%);
+                                border-bottom: 1px solid rgba(255,255,255,0.06);
+                            }
+                            .recon-header-left { display: flex; align-items: center; gap: 16px; }
+                            .recon-icon-ring {
+                                width: 52px; height: 52px;
+                                background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+                                border-radius: 50%;
+                                display: flex; align-items: center; justify-content: center;
+                                font-size: 1.4rem; color: #fff;
+                                box-shadow: 0 0 24px rgba(139,92,246,0.5);
+                                flex-shrink: 0;
+                            }
+                            .recon-title {
+                                margin: 0; font-size: 1.3rem; font-weight: 700;
+                                color: #fff; letter-spacing: 0.3px;
+                            }
+                            .recon-subtitle {
+                                margin: 2px 0 0; font-size: 0.8rem;
+                                color: rgba(255,255,255,0.5);
+                            }
+                            .recon-close-btn {
+                                background: rgba(255,255,255,0.07);
+                                border: 1px solid rgba(255,255,255,0.1);
+                                color: rgba(255,255,255,0.6);
+                                width: 36px; height: 36px; border-radius: 50%;
+                                cursor: pointer; font-size: 1rem;
+                                display: flex; align-items: center; justify-content: center;
+                                transition: all 0.2s;
+                            }
+                            .recon-close-btn:hover { background: rgba(239,68,68,0.3); color: #fca5a5; border-color: rgba(239,68,68,0.3); }
+
+                            /* Upload zone */
+                            .recon-upload-zone { padding: 24px 28px; }
+                            .recon-drop-label {
+                                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                                border: 2px dashed rgba(139,92,246,0.4);
+                                border-radius: 16px; padding: 32px 20px;
+                                cursor: pointer; transition: all 0.3s;
+                                background: rgba(139,92,246,0.05);
+                            }
+                            .recon-drop-label:hover {
+                                border-color: rgba(139,92,246,0.8);
+                                background: rgba(139,92,246,0.12);
+                                transform: translateY(-2px);
+                            }
+                            .recon-drop-icon {
+                                font-size: 2.5rem;
+                                background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+                                -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                                margin-bottom: 12px;
+                            }
+                            .recon-drop-text { margin: 0; color: rgba(255,255,255,0.8); font-size: 1rem; font-weight: 500; }
+                            .recon-drop-hint { margin: 4px 0 0; color: rgba(255,255,255,0.35); font-size: 0.78rem; }
+
+                            .recon-file-preview {
+                                display: flex; align-items: center;
+                                background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.3);
+                                border-radius: 10px; padding: 10px 16px;
+                                color: rgba(255,255,255,0.85); font-size: 0.9rem;
+                            }
+                            .recon-clear-file {
+                                margin-left: auto; background: transparent; border: none;
+                                color: rgba(255,255,255,0.4); cursor: pointer; font-size: 0.9rem;
+                                transition: color 0.2s;
+                            }
+                            .recon-clear-file:hover { color: #fca5a5; }
+
+                            .recon-actions {
+                                display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;
+                            }
+                            .recon-btn-cancel {
+                                background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+                                color: rgba(255,255,255,0.6); padding: 10px 22px; border-radius: 10px;
+                                cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+                            }
+                            .recon-btn-cancel:hover { background: rgba(255,255,255,0.1); }
+                            .recon-btn-submit {
+                                background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+                                border: none; color: #fff; padding: 10px 26px; border-radius: 10px;
+                                cursor: pointer; font-size: 0.9rem; font-weight: 600;
+                                box-shadow: 0 4px 20px rgba(139,92,246,0.4);
+                                transition: all 0.25s; display: flex; align-items: center; gap: 8px;
+                            }
+                            .recon-btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(139,92,246,0.55); }
+                            .recon-btn-submit:disabled { opacity: 0.6; transform: none; cursor: wait; }
+
+                            /* Results */
+                            .recon-results {
+                                padding: 0 28px 28px;
+                                max-height: 55vh; overflow-y: auto;
+                            }
+                            .recon-results::-webkit-scrollbar { width: 6px; }
+                            .recon-results::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 4px; }
+                            .recon-results::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.5); border-radius: 4px; }
+
+                            .recon-results-header {
+                                display: flex; align-items: center; justify-content: space-between;
+                                padding: 16px 0 14px;
+                                border-bottom: 1px solid rgba(255,255,255,0.07);
+                                margin-bottom: 16px;
+                            }
+                            .recon-results-title { font-size: 1rem; font-weight: 600; color: #fff; }
+                            .recon-btn-recheck {
+                                background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3);
+                                color: #a78bfa; padding: 6px 14px; border-radius: 8px;
+                                cursor: pointer; font-size: 0.8rem; transition: all 0.2s;
+                                display: flex; align-items: center; gap: 6px;
+                            }
+                            .recon-btn-recheck:hover { background: rgba(139,92,246,0.3); }
+
+                            .recon-grid {
+                                display: grid;
+                                grid-template-columns: 1fr 1fr;
+                                gap: 14px;
+                            }
+                            .recon-card {
+                                background: rgba(255,255,255,0.04);
+                                border-radius: 14px;
+                                overflow: hidden;
+                                border: 1px solid rgba(255,255,255,0.07);
+                            }
+                            .recon-card-full { grid-column: 1 / -1; }
+                            .recon-card-header {
+                                display: flex; align-items: center; gap: 8px;
+                                padding: 10px 14px; font-size: 0.82rem;
+                                font-weight: 600; color: rgba(255,255,255,0.85);
+                            }
+                            .recon-card-danger .recon-card-header { background: rgba(239,68,68,0.15); border-bottom: 1px solid rgba(239,68,68,0.2); }
+                            .recon-card-warning .recon-card-header { background: rgba(251,191,36,0.12); border-bottom: 1px solid rgba(251,191,36,0.2); }
+                            .recon-card-info .recon-card-header { background: rgba(59,130,246,0.12); border-bottom: 1px solid rgba(59,130,246,0.2); }
+                            .recon-card-promo .recon-card-header { background: rgba(52,211,153,0.12); border-bottom: 1px solid rgba(52,211,153,0.2); }
+
+                            .recon-card-dot {
+                                width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+                            }
+                            .dot-danger  { background: #f87171; box-shadow: 0 0 6px #f87171; }
+                            .dot-warning { background: #fbbf24; box-shadow: 0 0 6px #fbbf24; }
+                            .dot-info    { background: #60a5fa; box-shadow: 0 0 6px #60a5fa; }
+                            .dot-promo   { background: #34d399; box-shadow: 0 0 6px #34d399; }
+
+                            .recon-card-badge {
+                                margin-left: auto; background: rgba(255,255,255,0.1);
+                                border-radius: 20px; padding: 2px 10px;
+                                font-size: 0.75rem; color: rgba(255,255,255,0.6);
+                            }
+                            .recon-card-body {
+                                padding: 10px 14px; color: rgba(255,255,255,0.75); font-size: 0.82rem;
+                            }
+                            .recon-card-body table { width: 100%; border-collapse: collapse; }
+                            .recon-card-body tr:not(:last-child) td { border-bottom: 1px solid rgba(255,255,255,0.05); }
+                            .recon-card-body td { padding: 6px 4px; vertical-align: middle; }
+                            .recon-card-body .text-success { color: #4ade80 !important; }
+                            .recon-card-body .text-danger  { color: #f87171 !important; }
+                            .recon-card-body .text-warning { color: #fbbf24 !important; }
+
+                            /* Quick-add dropdown inside dark modal */
+                            .recon-card-body select {
+                                background: rgba(15,20,40,0.9) !important;
+                                color: rgba(255,255,255,0.9) !important;
+                                border: 1px solid rgba(139,92,246,0.3) !important;
+                                border-radius: 6px !important;
+                            }
+                            .recon-card-body .btn-outline-success {
+                                border-color: #4ade80 !important; color: #4ade80 !important;
+                            }
+                            .recon-card-body .btn-outline-success:hover {
+                                background: rgba(74,222,128,0.15) !important;
+                            }
+                            .recon-card-body .btn-success {
+                                background: rgba(74,222,128,0.25) !important; color: #4ade80 !important;
+                            }
+
+                            @media (max-width: 640px) {
+                                .recon-modal-box { width: 97%; margin: 2vh auto; }
+                                .recon-grid { grid-template-columns: 1fr; }
+                                .recon-card-full { grid-column: 1; }
+                                .recon-header { padding: 18px 18px 16px; }
+                                .recon-upload-zone { padding: 16px 18px; }
+                                .recon-results { padding: 0 18px 18px; }
+                            }
+                        </style>
+
                         <script>
                             function openResolveModal(id) {
                                 document.getElementById('resolveForm').action = `/periods/<%= period.id %>/incidents/${id}/resolve`;
@@ -572,8 +895,168 @@
                                         showModal('incidentModal');
                                     }
                                 });
+
+                                async function submitReconcile(e) {
+                                    e.preventDefault();
+                                    const btn = document.getElementById('reconcileBtn');
+                                    const fileInput = document.getElementById('reconcileImage');
+                                    const resultsArea = document.getElementById('reconcileResults');
+                                    
+                                    if (!fileInput.files[0]) return;
+
+                                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังวิเคราะห์...';
+                                    btn.disabled = true;
+                                    resultsArea.style.display = 'none';
+
+                                    const formData = new FormData();
+                                    formData.append('receiptImage', fileInput.files[0]);
+
+                                    try {
+                                        const res = await fetch('/periods/<%= period.id %>/reconcile', {
+                                            method: 'POST',
+                                            body: formData
+                                        });
+                                        const data = await res.json();
+                                        
+                                        if (data.error) throw new Error(data.error);
+
+                                        // Render Results
+                                        const r = data.results;
+                                        const fmt = (n) => new Intl.NumberFormat('lo-LA').format(n);
+
+                                        // Missing in System
+                                        let htmlMissingSys = r.missingInSystem.length === 0 ? '<p class="text-success m-0">ไม่มีข้อมูลตกหล่น</p>' : '<table class="table table-sm m-0" style="vertical-align: middle;"><tbody>';
+                                        r.missingInSystem.forEach((i, idx) => {
+                                            const safeCategory = i.category.replace(/'/g, "\\'"); // escape quotes
+                                            const catOptions = `
+                                                <option value="1. จ่ายทั่วไป">1. จ่ายทั่วไป</option>
+                                                <option value="2.1 โปรโมชั่นใช้เครดิต">2.1 โปรโมชั่นใช้เครดิต</option>
+                                                <option value="2.2 โปรโมชั่นเงินสด">2.2 โปรโมชั่นเงินสด</option>
+                                                <option value="3. กิจกรรม/การตลาด">3. กิจกรรม/การตลาด</option>
+                                                <option value="4. ธนาคาร">4. ธนาคาร</option>
+                                                <option value="5. ภาษีอากร">5. ภาษีอากร</option>
+                                                <option value="6. โยนของ">6. โยนของ</option>
+                                            `;
+                                            htmlMissingSys += `
+                                                <tr>
+                                                    <td>
+                                                        <div style="font-size: 0.8rem; margin-bottom: 4px; color: #555;">${i.category}</div>
+                                                        <select id="quickCat_${idx}" class="form-control form-control-sm" style="font-size: 0.75rem; height: 26px; padding: 2px 8px; width: 100%;">
+                                                            ${catOptions}
+                                                        </select>
+                                                    </td>
+                                                    <td class="text-end text-danger" style="vertical-align: middle;">${fmt(i.amount)}</td>
+                                                    <td class="text-end" style="width: 70px; vertical-align: middle;">
+                                                        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2" style="font-size: 0.75rem;" onclick="quickAddExpenseWithSelect('quickCat_${idx}', '${safeCategory}', ${i.amount}, this)">+ เพิ่ม</button>
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        });
+                                        if (r.missingInSystem.length > 0) htmlMissingSys += '</tbody></table>';
+                                        document.getElementById('resMissingSystem').innerHTML = htmlMissingSys;
+                                        document.getElementById('badgeMissingSys').textContent = r.missingInSystem.length;
+
+                                        // Missing in Image
+                                        let htmlMissingImg = r.missingInImage.length === 0 ? '<p class="text-success m-0">ข้อมูลครบถ้วน</p>' : '<table class="table table-sm m-0"><tbody>';
+                                        r.missingInImage.forEach(i => htmlMissingImg += `<tr><td>${i.category}</td><td class="text-end text-warning">${fmt(i.system_amount)}</td></tr>`);
+                                        if (r.missingInImage.length > 0) htmlMissingImg += '</tbody></table>';
+                                        document.getElementById('resMissingImage').innerHTML = htmlMissingImg;
+                                        document.getElementById('badgeMissingImg').textContent = r.missingInImage.length;
+
+                                        // Discrepancies
+                                        let htmlDisc = r.discrepancies.length === 0 ? '<p class="text-success m-0">ยอดเงินตรงกันทุกรายการ!</p>' : '<table class="table table-sm m-0"><thead><tr><th>Category</th><th class="text-end">Image</th><th class="text-end">System</th><th class="text-end">Diff</th></tr></thead><tbody>';
+                                        r.discrepancies.forEach(i => htmlDisc += `<tr><td>${i.category}</td><td class="text-end">${fmt(i.image_amount)}</td><td class="text-end">${fmt(i.system_amount)}</td><td class="text-end text-danger">${fmt(i.difference)}</td></tr>`);
+                                        if (r.discrepancies.length > 0) htmlDisc += '</tbody></table>';
+                                        document.getElementById('resDiscrepancies').innerHTML = htmlDisc;
+                                        document.getElementById('badgeDisc').textContent = r.discrepancies.length;
+
+                                        // Promotions
+                                        const p = r.promotions;
+                                        document.getElementById('resPromotions').innerHTML = `
+                                            <div class="row">
+                                                <div class="col-4"><b>รูปภาพ (Image)</b><br>${fmt(p.image_total)}</div>
+                                                <div class="col-4"><b>ระบบ (System)</b><br>${fmt(p.system_total)}</div>
+                                                <div class="col-4"><b class="${p.difference !== 0 ? 'text-danger' : 'text-success'}">ผลต่าง (Diff)</b><br><span class="${p.difference !== 0 ? 'text-danger' : 'text-success'}">${fmt(p.difference)}</span></div>
+                                            </div>
+                                            ${p.needs_cross_day_check ? '<div class="alert alert-warning mt-2 mb-0 py-1" style="font-size: 0.85rem;">⚠️ ยอดโปรโมชั่นในรูปสูงกว่าในระบบ อาจมีโปรโมชั่นข้ามวัน</div>' : ''}
+                                        `;
+
+                                        resultsArea.style.display = 'block';
+                                        // Hide upload zone — keep results persistent when modal reopens
+                                        document.getElementById('reconUploadZone').style.display = 'none';
+                                        document.getElementById('reconRecheckBar').style.display = 'flex';
+                                    } catch (err) {
+                                        alert('เกิดข้อผิดพลาด: ' + err.message);
+                                        btn.innerHTML = '<i class="fas fa-search-dollar"></i> เริ่มตรวจสอบ';
+                                        btn.disabled = false;
+                                    } finally {
+                                        // Only re-enable btn — don't reset UI so state stays persistent
+                                        btn.disabled = false;
+                                    }
+                                }
+
+                                async function quickAddExpenseWithSelect(selectId, originalCategory, amount, btn) {
+                                    const selectEl = document.getElementById(selectId);
+                                    const selectedCategory = selectEl.value;
+                                    const description = 'เพิ่มจากระบบตรวจบิล AI (AI อ่านเจอเป็น: ' + originalCategory + ')';
+                                    
+                                    btn.innerHTML = '...';
+                                    btn.disabled = true;
+                                    selectEl.disabled = true;
+                                    
+                                    try {
+                                        const res = await fetch('/periods/<%= period.id %>/expenses/quick-add', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ category: selectedCategory, amount_lak: amount, description })
+                                        });
+                                        const data = await res.json();
+                                        if (data.error) throw new Error(data.error);
+                                        
+                                        btn.innerHTML = '✓ เพิ่มแล้ว';
+                                        btn.classList.remove('btn-outline-success');
+                                        btn.classList.add('btn-success', 'text-white');
+                                        
+                                        // Show the refresh button if not already visible
+                                        const refreshBtn = document.getElementById('refreshAfterAddBtn');
+                                        if (refreshBtn) refreshBtn.style.display = 'block';
+                                    } catch (err) {
+                                        alert('เกิดข้อผิดพลาด: ' + err.message);
+                                        btn.innerHTML = '+ เพิ่ม';
+                                        btn.disabled = false;
+                                        selectEl.disabled = false;
+                                    }
+                                }
+
+                                function handleReconFileSelect(input) {
+                                    if (input.files && input.files[0]) {
+                                        document.getElementById('reconDropLabel').style.display = 'none';
+                                        document.getElementById('reconFilePreview').style.display = 'flex';
+                                        document.getElementById('reconFileName').textContent = input.files[0].name;
+                                    }
+                                }
+
+                                function clearReconFile() {
+                                    document.getElementById('reconcileImage').value = '';
+                                    document.getElementById('reconFilePreview').style.display = 'none';
+                                    document.getElementById('reconDropLabel').style.display = 'flex';
+                                }
+
+                                function showRecheckUpload() {
+                                    // Show upload zone again for re-check
+                                    document.getElementById('reconUploadZone').style.display = 'block';
+                                    document.getElementById('reconRecheckBar').style.display = 'none';
+                                    // Reset file input
+                                    document.getElementById('reconcileImage').value = '';
+                                    document.getElementById('reconFilePreview').style.display = 'none';
+                                    document.getElementById('reconDropLabel').style.display = 'flex';
+                                    document.getElementById('reconcileBtn').innerHTML = '<i class="fas fa-search-dollar"></i> เริ่มตรวจสอบ';
+                                    document.getElementById('reconcileBtn').disabled = false;
+                                    // Keep old results visible below for reference
+                                }
                             </script>
 
                             <div class="text-center text-muted" style="margin-top: 50px; font-size: 0.8rem;">
+                                <button id="refreshAfterAddBtn" class="btn btn-sm btn-info text-dark mx-auto" style="display: none; margin-bottom: 10px;" onclick="location.reload()">🔄 รีเฟรชหน้ารายจ่ายเพื่อดูข้อมูลล่าสุด</button>
                                 Debug Timestamp: <%= new Date().toLocaleTimeString('th-TH') %>
                             </div>

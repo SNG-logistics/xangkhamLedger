@@ -11,6 +11,14 @@ const Expense = {
         return rows;
     },
 
+    findByDate: async (dateStr) => {
+        const [rows] = await db.query(`
+      SELECT * FROM expenses 
+      WHERE DATE(occurred_at) = ? AND is_deleted = FALSE
+    `, [dateStr]);
+        return rows;
+    },
+
     findById: async (id) => {
         const [rows] = await db.query(
             'SELECT * FROM expenses WHERE id = ? AND is_deleted = FALSE',

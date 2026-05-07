@@ -1,0 +1,153 @@
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Account Reconciliation (AI)</h1>
+</div>
+
+<% if (error) { %>
+    <div class="alert alert-danger"><%= error %></div>
+<% } %>
+
+<div class="row mb-4">
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">1. Upload Ledger Image</h5>
+            </div>
+            <div class="card-body">
+                <form action="/reconciliation/process" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">Target Date</label>
+                        <input type="date" name="targetDate" class="form-control" value="<%= results ? results.targetDate : new Date().toISOString().split('T')[0] %>" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Receipt/Ledger Image</label>
+                        <input type="file" name="receiptImage" class="form-control" accept="image/*" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" onclick="this.innerHTML='<span class=\'spinner-border spinner-border-sm\'></span> Analyzing with AI...'; this.disabled=true; this.form.submit();">
+                        Start Cross-Check
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<% if (results) { %>
+    <h3 class="mb-3">Results for <%= results.targetDate %></h3>
+    
+    <div class="row">
+        <!-- Missing in System -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm border-danger h-100">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">⚠️ Missing in System</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Items found in the image but not entered into the database.</p>
+                    <% if (results.missingInSystem.length === 0) { %>
+                        <div class="alert alert-success">No missing items found!</div>
+                    <% } else { %>
+                        <table class="table table-sm">
+                            <thead><tr><th>Category</th><th class="text-end">Amount (LAK)</th></tr></thead>
+                            <tbody>
+                                <% results.missingInSystem.forEach(item => { %>
+                                    <tr>
+                                        <td><%= item.category %></td>
+                                        <td class="text-end text-danger"><%= new Intl.NumberFormat('lo-LA').format(item.amount) %></td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Missing in Image -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm border-warning h-100">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">⚠️ Missing in Image</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Items in the database but not found in the uploaded image.</p>
+                    <% if (results.missingInImage.length === 0) { %>
+                        <div class="alert alert-success">Everything in DB is in the image!</div>
+                    <% } else { %>
+                        <table class="table table-sm">
+                            <thead><tr><th>Category</th><th class="text-end">Amount (LAK)</th></tr></thead>
+                            <tbody>
+                                <% results.missingInImage.forEach(item => { %>
+                                    <tr>
+                                        <td><%= item.category %></td>
+                                        <td class="text-end"><%= new Intl.NumberFormat('lo-LA').format(item.system_amount) %></td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Discrepancies -->
+        <div class="col-md-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Amount Discrepancies</h5>
+                </div>
+                <div class="card-body">
+                    <% if (results.discrepancies.length === 0) { %>
+                        <div class="alert alert-success">All matched items have correct amounts!</div>
+                    <% } else { %>
+                        <table class="table table-bordered">
+                            <thead><tr><th>Category</th><th class="text-end">Image Amount</th><th class="text-end">System Amount</th><th class="text-end">Difference</th></tr></thead>
+                            <tbody>
+                                <% results.discrepancies.forEach(item => { %>
+                                    <tr>
+                                        <td><%= item.category %></td>
+                                        <td class="text-end"><%= new Intl.NumberFormat('lo-LA').format(item.image_amount) %></td>
+                                        <td class="text-end"><%= new Intl.NumberFormat('lo-LA').format(item.system_amount) %></td>
+                                        <td class="text-end text-danger"><%= new Intl.NumberFormat('lo-LA').format(item.difference) %></td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Promotions -->
+        <div class="col-md-12 mb-4">
+            <div class="card shadow-sm border-info">
+                <div class="card-header bg-info text-dark">
+                    <h5 class="mb-0">Promotions Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <h6>Image Total (LAK)</h6>
+                            <h4><%= new Intl.NumberFormat('lo-LA').format(results.promotions.image_total) %></h4>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>System Total (LAK)</h6>
+                            <h4><%= new Intl.NumberFormat('lo-LA').format(results.promotions.system_total) %></h4>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Difference</h6>
+                            <h4 class="<%= results.promotions.difference !== 0 ? 'text-danger' : 'text-success' %>">
+                                <%= new Intl.NumberFormat('lo-LA').format(results.promotions.difference) %>
+                            </h4>
+                        </div>
+                    </div>
+                    <% if (results.promotions.needs_cross_day_check) { %>
+                        <div class="alert alert-warning mt-3">
+                            <i class="fas fa-exclamation-triangle"></i> Image promotion total exceeds system total. This may be due to cross-day promotions (e.g. entered late at night).
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+    </div>
+<% } %>
