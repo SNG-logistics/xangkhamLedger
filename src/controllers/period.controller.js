@@ -487,7 +487,7 @@ const periodController = {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(payload),
-                signal: AbortSignal.timeout(60000)
+                signal: AbortSignal.timeout(180000) // Increased to 3 minutes
             });
 
             if (!response.ok) {
@@ -734,7 +734,7 @@ const periodController = {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(payload),
-                signal: AbortSignal.timeout(60000)
+                signal: AbortSignal.timeout(180000) // Increased to 3 minutes
             });
 
             if (!response.ok) {
