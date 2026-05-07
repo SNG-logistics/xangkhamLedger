@@ -650,6 +650,21 @@ const periodController = {
         }
     },
 
+    saveSummaryImage: async (req, res) => {
+        try {
+            const periodId = req.params.id;
+            if (!req.files || !req.files.summaryImage) {
+                return res.status(400).json({ error: 'กรุณาอัปโหลดรูปภาพ' });
+            }
+            const savedPath = path.join(__dirname, '../public/uploads', `recon_period_${periodId}.jpg`);
+            fs.writeFileSync(savedPath, req.files.summaryImage.data);
+            res.json({ success: true, url: `/uploads/recon_period_${periodId}.jpg` });
+        } catch (error) {
+            console.error('SaveSummaryImage Error:', error);
+            res.status(500).json({ error: 'บันทึกรูปภาพไม่สำเร็จ' });
+        }
+    },
+
     quickAddExpense: async (req, res) => {
         try {
             const periodId = req.params.id;
