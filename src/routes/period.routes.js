@@ -18,6 +18,8 @@ router.post('/:id/incidents/:incidentId/resolve', auth.requireSuperAdmin, period
 router.delete('/:id', auth.requireSuperAdmin, periodController.delete);
 router.post('/:id/reconcile', auth.requireAdmin, periodController.reconcileImage);
 router.post('/:id/upload-summary', auth.requireAdmin, periodController.saveSummaryImage);
+router.post('/:id/upload-promo', auth.requireAdmin, periodController.savePromoDashboardImage);
+router.post('/:id/reconcile-promotions', auth.requireAdmin, periodController.reconcilePromotions);
 router.post('/:id/expenses/quick-add', auth.requireAdmin, rbac.canModifyPeriod, periodController.quickAddExpense);
 
 module.exports = router;

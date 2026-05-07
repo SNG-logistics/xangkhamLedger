@@ -377,6 +377,7 @@
                         </div>
 
                         <!-- Summary Image Evidence Card -->
+                        <!-- Summary Image Evidence Card -->
                         <div class="card mt-20" style="border:1px solid rgba(139,92,246,0.3); background:rgba(139,92,246,0.04);">
                             <div class="card-header" style="background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(79,70,229,0.1)); border-bottom:1px solid rgba(139,92,246,0.2);">
                                 <div class="flex-between">
@@ -425,6 +426,56 @@
                                     </div>
                                 <% } %>
                                 <div id="summaryUploadStatus" style="display:none; margin-top:8px; font-size:0.8rem;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Promotion Image Evidence Card -->
+                        <div class="card mt-20" style="border:1px solid rgba(245,158,11,0.3); background:rgba(245,158,11,0.04);">
+                            <div class="card-header" style="background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(217,119,6,0.1)); border-bottom:1px solid rgba(245,158,11,0.2);">
+                                <div class="flex-between">
+                                    <h3 style="color:#fbbf24; margin:0; display:flex; align-items:center; gap:8px;">
+                                        <i class="fas fa-gift"></i> หลักฐานรูป Dashboard โปรโมชั่น
+                                    </h3>
+                                    <div style="display:flex; gap:8px; align-items:center;">
+                                        <% if (locals.promoImageUrl) { %>
+                                            <a href="<%= promoImageUrl %>" target="_blank" class="btn btn-sm" style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); font-size:0.78rem;">
+                                                <i class="fas fa-expand"></i> ดูเต็ม
+                                            </a>
+                                            <button onclick="reconcilePromotions()" id="promoReconcileBtn" class="btn btn-sm" style="background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; border:none; font-size:0.78rem;">
+                                                <i class="fas fa-robot"></i> เทียบยอด
+                                            </button>
+                                        <% } %>
+                                        <label for="promoImageInput" class="btn btn-sm" style="background:rgba(255,255,255,0.08); color:#a0aec0; border:1px solid rgba(255,255,255,0.15); font-size:0.78rem; cursor:pointer; margin:0;">
+                                            <i class="fas fa-upload"></i> <%= locals.promoImageUrl ? 'อัพโหลดใหม่' : 'อัพโหลดรูปโปรฯ' %>
+                                        </label>
+                                        <input type="file" id="promoImageInput" accept="image/*" style="display:none;" onchange="uploadPromoImage(this)">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body" style="padding: 12px 20px;">
+                                <% if (locals.promoImageUrl) { %>
+                                    <div style="display:flex; align-items:flex-start; gap:16px;">
+                                        <a href="<%= promoImageUrl %>" target="_blank" style="flex-shrink:0;">
+                                            <img src="<%= promoImageUrl %>" alt="รูปโปรโมชั่น" id="promoThumb"
+                                                style="width:160px; height:100px; object-fit:cover; border-radius:8px; border:1px solid rgba(245,158,11,0.3); transition:transform 0.2s;"
+                                                onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'">
+                                        </a>
+                                        <div style="flex-grow:1;">
+                                            <p style="color:#fbbf24; font-size:0.85rem; margin:0 0 6px;">📋 สำหรับตรวจสอบยอดโปรฯ</p>
+                                            <p style="color:rgba(255,255,255,0.6); font-size:0.78rem; margin:0; line-height:1.6;">
+                                                อัพโหลดรูปหน้า "จ่ายโปรโมชั่น" เพื่อให้ AI แยกยอดรายตัว (เช่น โปรเลขท้าย, โปรเลขสลับ) มาเช็คว่าลงยอดในระบบครบถ้วนแล้วหรือยัง<br>
+                                                * ระบบจะแยกเฉพาะยอดโปรโมชั่น โดยข้ามยอดโอนธนาคารให้โดยอัตโนมัติ
+                                            </p>
+                                            <div id="promoReconcileResult" style="margin-top:10px; font-size:0.85rem;"></div>
+                                        </div>
+                                    </div>
+                                <% } else { %>
+                                    <div style="text-align:center; padding:24px; color:rgba(255,255,255,0.35);">
+                                        <i class="fas fa-gift" style="font-size:2rem; margin-bottom:8px; display:block; color:rgba(245,158,11,0.4);"></i>
+                                        <p style="margin:0 0 6px; font-size:0.85rem;">ยังไม่มีรูป Dashboard โปรโมชั่น</p>
+                                    </div>
+                                <% } %>
+                                <div id="promoUploadStatus" style="display:none; margin-top:8px; font-size:0.8rem;"></div>
                             </div>
                         </div>
 
@@ -960,33 +1011,99 @@
                                     document.getElementById('quickExpenseModal').style.display = 'block';
                                 }
 
+                                async function uploadSummaryImage(input) {
+                                    if (!input.files[0]) return;
+                                    const status = document.getElementById('summaryUploadStatus');
+                                    status.style.display = 'block';
+                                    status.style.color = '#c4b5fd';
+                                    status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังอัพโหลด...';
+                                    const fd = new FormData();
+                                    fd.append('summaryImage', input.files[0]);
+                                    try {
+                                        const res = await fetch('/periods/<%= period.id %>/upload-summary', { method: 'POST', body: fd });
+                                        const data = await res.json();
+                                        if (data.error) throw new Error(data.error);
+                                        status.style.color = '#4ade80';
+                                        status.innerHTML = '✅ บันทึกรูปหลักฐานสำเร็จ — <a href="' + data.url + '" target="_blank" style="color:#c4b5fd;">ดูรูป</a>';
+                                        const thumb = document.getElementById('summaryThumb');
+                                        if (thumb) { thumb.src = data.url + '?t=' + Date.now(); thumb.parentElement.href = data.url; }
+                                        else { setTimeout(() => location.reload(), 800); }
+                                    } catch (err) {
+                                        status.style.color = '#f87171';
+                                        status.innerHTML = '❌ ' + err.message;
+                                    }
+                                }
+
+                                async function uploadPromoImage(input) {
+                                    if (!input.files[0]) return;
+                                    const status = document.getElementById('promoUploadStatus');
+                                    status.style.display = 'block';
+                                    status.style.color = '#fbbf24';
+                                    status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังอัพโหลด...';
+                                    const fd = new FormData();
+                                    fd.append('promoImage', input.files[0]);
+                                    try {
+                                        const res = await fetch('/periods/<%= period.id %>/upload-promo', { method: 'POST', body: fd });
+                                        const data = await res.json();
+                                        if (data.error) throw new Error(data.error);
+                                        status.style.color = '#4ade80';
+                                        status.innerHTML = '✅ บันทึกรูประบบโปรโมชั่นสำเร็จ — <a href="' + data.url + '" target="_blank" style="color:#fbbf24;">ดูรูป</a>';
+                                        const thumb = document.getElementById('promoThumb');
+                                        if (thumb) { thumb.src = data.url + '?t=' + Date.now(); thumb.parentElement.href = data.url; }
+                                        else { setTimeout(() => location.reload(), 800); }
+                                    } catch (err) {
+                                        status.style.color = '#f87171';
+                                        status.innerHTML = '❌ ' + err.message;
+                                    }
+                                }
+
+                                async function reconcilePromotions() {
+                                    const btn = document.getElementById('promoReconcileBtn');
+                                    const resDiv = document.getElementById('promoReconcileResult');
+                                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังเทียบยอด...';
+                                    btn.disabled = true;
+                                    resDiv.innerHTML = '<span style="color:#fbbf24;">กำลังประมวลผลรูปด้วย AI (อาจใช้เวลา 10-30 วินาที)...</span>';
+
+                                    try {
+                                        const res = await fetch('/periods/<%= period.id %>/reconcile-promotions', { method: 'POST' });
+                                        const data = await res.json();
+                                        if (data.error) throw new Error(data.error);
+
+                                        let html = '<div style="margin-top:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:6px; border:1px solid rgba(255,255,255,0.05);">';
+                                        
+                                        if (data.results.missingInSystem.length > 0) {
+                                            html += '<h4 style="color:#f87171; margin-top:0; font-size:0.85rem;"><i class="fas fa-exclamation-circle"></i> โปรโมชั่นที่ไม่ได้ลงในระบบ (ต้องเพิ่ม)</h4><ul style="margin:0 0 10px; padding-left:20px; font-size:0.8rem;">';
+                                            data.results.missingInSystem.forEach(item => {
+                                                html += `<li style="color:#fca5a5;">${item.category} — ${Number(item.amount).toLocaleString()} LAK</li>`;
+                                            });
+                                            html += '</ul>';
+                                        }
+
+                                        if (data.results.matched.length > 0) {
+                                            html += '<h4 style="color:#4ade80; margin-top:0; font-size:0.85rem;"><i class="fas fa-check-circle"></i> โปรโมชั่นที่ตรงกับระบบแล้ว</h4><ul style="margin:0; padding-left:20px; font-size:0.8rem;">';
+                                            data.results.matched.forEach(item => {
+                                                html += `<li style="color:#a7f3d0;">${item.category} — ${Number(item.amount).toLocaleString()} LAK</li>`;
+                                            });
+                                            html += '</ul>';
+                                        }
+
+                                        if (data.results.missingInSystem.length === 0) {
+                                            html += '<div style="color:#4ade80; font-weight:bold;"><i class="fas fa-check-double"></i> ยอดโปรโมชั่นทั้งหมดตรงกัน!</div>';
+                                        }
+
+                                        html += '</div>';
+                                        resDiv.innerHTML = html;
+                                    } catch (err) {
+                                        resDiv.innerHTML = `<span style="color:#f87171;"><i class="fas fa-times-circle"></i> ${err.message}</span>`;
+                                    } finally {
+                                        btn.innerHTML = '<i class="fas fa-robot"></i> เทียบยอด';
+                                        btn.disabled = false;
+                                    }
+                                }
+
                                 document.addEventListener('DOMContentLoaded', function () {
                                     const urlParams = new URLSearchParams(window.location.search);
                                     if (urlParams.get('action') === 'new_incident') showModal('incidentModal');
-
-                                    async function uploadSummaryImage(input) {
-                                        if (!input.files[0]) return;
-                                        const status = document.getElementById('summaryUploadStatus');
-                                        status.style.display = 'block';
-                                        status.style.color = '#c4b5fd';
-                                        status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังอัพโหลด...';
-                                        const fd = new FormData();
-                                        fd.append('summaryImage', input.files[0]);
-                                        try {
-                                            const res = await fetch('/periods/<%= period.id %>/upload-summary', { method: 'POST', body: fd });
-                                            const data = await res.json();
-                                            if (data.error) throw new Error(data.error);
-                                            status.style.color = '#4ade80';
-                                            status.innerHTML = '✅ บันทึกรูปหลักฐานสำเร็จ — <a href="' + data.url + '" target="_blank" style="color:#c4b5fd;">ดูรูป</a>';
-                                            // Update thumbnail if exists, else reload page
-                                            const thumb = document.getElementById('summaryThumb');
-                                            if (thumb) { thumb.src = data.url + '?t=' + Date.now(); thumb.parentElement.href = data.url; }
-                                            else { setTimeout(() => location.reload(), 800); }
-                                        } catch (err) {
-                                            status.style.color = '#f87171';
-                                            status.innerHTML = '❌ ' + err.message;
-                                        }
-                                    }
 
                                     // Restore last reconciliation results from localStorage
                                     try {

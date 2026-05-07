@@ -665,6 +665,151 @@ const periodController = {
         }
     },
 
+    savePromoDashboardImage: async (req, res) => {
+        try {
+            const periodId = req.params.id;
+            if (!req.files || !req.files.promoImage) {
+                return res.status(400).json({ error: 'กรุณาอัปโหลดรูปภาพ' });
+            }
+            const savedPath = path.join(__dirname, '../public/uploads', `promo_period_${periodId}.jpg`);
+            fs.writeFileSync(savedPath, req.files.promoImage.data);
+            res.json({ success: true, url: `/uploads/promo_period_${periodId}.jpg` });
+        } catch (error) {
+            console.error('SavePromoDashboardImage Error:', error);
+            res.status(500).json({ error: 'บันทึกรูประบบโปรโมชั่นไม่สำเร็จ' });
+        }
+    },
+
+    reconcilePromotions: async (req, res) => {
+        try {
+            const periodId = req.params.id;
+            const savedImagePath = path.join(__dirname, '../public/uploads', `promo_period_${periodId}.jpg`);
+            
+            if (!fs.existsSync(savedImagePath)) {
+                return res.status(400).json({ error: 'ไม่พบรูปภาพหลักฐานโปรโมชั่นที่บันทึกไว้ โปรดอัปโหลดใหม่' });
+            }
+
+            const imageBuffer = fs.readFileSync(savedImagePath);
+            const base64Image = imageBuffer.toString('base64');
+            const mimeType = 'image/jpeg';
+            
+            const apiKey = process.env.AI_VISION_API_KEY;
+            const baseUrl = process.env.AI_VISION_API_BASE_URL || 'https://api.openai.com/v1';
+            const model = process.env.AI_VISION_MODEL || 'gpt-4o-mini';
+
+            const prompt = `
+            คุณเป็นนักบัญชี นี่คือหน้าจอ Dashboard สรุปการจ่ายโปรโมชั่น
+            
+            หน้าที่ของคุณ:
+            ดึงเฉพาะตัวเลข "ยอดโปรโมชั่น" ข้ามยอดธนาคาร (เช่น BCEL-ONE, LDB, JDB ห้ามนำมาเด็ดขาด)
+            ตัวอย่างรายการโปรโมชั่นที่ต้องดึง: โปรนามสัตว์, โปรรอบทิศ, โปรเลขสลับ, โปรเลขข้างเคียง, โปรเลขหน้า, โปรเลขท้าย
+            
+            ตอบกลับเป็น JSON array ของ items อย่างเดียว ห้ามมีข้อความอื่น:
+            {
+              "items": [
+                {"category": "ชื่อโปรโมชั่น", "amount_lak": 1200000}
+              ]
+            }
+            `;
+
+            const payload = {
+                model: model,
+                messages: [
+                    {
+                        role: "user",
+                        content: [
+                            { type: "text", text: prompt },
+                            { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Image}` } }
+                        ]
+                    }
+                ],
+                max_tokens: 1500,
+                temperature: 0.1
+            };
+
+            const response = await fetch(`${baseUrl}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(60000)
+            });
+
+            if (!response.ok) {
+                throw new Error(`AI API error: ${response.status}`);
+            }
+
+            const responseData = await response.json();
+            let content = responseData.choices[0].message.content || "";
+            content = content.trim();
+
+            let imageData;
+            try {
+                const jsonMatch = content.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    imageData = JSON.parse(jsonMatch[0].replace(/[\u0000-\u001F]+/g, " "));
+                } else {
+                    throw new Error("No JSON found");
+                }
+            } catch (err) {
+                return res.status(500).json({ error: "AI ส่งข้อมูล JSON กลับมาผิดพลาด" });
+            }
+
+            const expenses = await Expense.findByPeriod(periodId);
+            const systemPromos = expenses
+                .filter(exp => {
+                    const c = (exp.category || '').toUpperCase();
+                    const d = (exp.description || '').toUpperCase();
+                    // Match items categorized as "2.2 โปรโมชั่นเงินสด" or similar
+                    return c.includes('PROMOTION') || c.includes('โปรโมชั่น') || c.includes('โปรโมชัน') || c.includes('โปร');
+                })
+                .map(exp => ({
+                    id: exp.id,
+                    amount: parseFloat(exp.amount_lak) || 0,
+                    category: exp.category,
+                    description: exp.description || '',
+                    used: false
+                }));
+
+            const imageItems = imageData.items || [];
+            const missingInSystem = [];
+            const matched = [];
+
+            imageItems.forEach(item => {
+                const cat = item.category || 'Unknown';
+                const amount = parseFloat(item.amount_lak) || 0;
+                
+                // Match by exact amount first, then by keyword if amount match fails
+                const matchIdx = systemPromos.findIndex(
+                    e => !e.used && Math.abs(e.amount - amount) <= 1
+                );
+
+                if (matchIdx !== -1) {
+                    systemPromos[matchIdx].used = true;
+                    matched.push({ category: cat, amount, system_desc: systemPromos[matchIdx].description });
+                } else {
+                    missingInSystem.push({ category: cat, amount });
+                }
+            });
+
+            const missingInImage = systemPromos.filter(e => !e.used).map(e => ({
+                category: e.category,
+                description: e.description,
+                amount: e.amount
+            }));
+
+            res.json({
+                success: true,
+                results: { missingInSystem, missingInImage, matched }
+            });
+        } catch (error) {
+            console.error('ReconcilePromotions Error:', error);
+            res.status(500).json({ error: error.message });
+        }
+    },
+
     quickAddExpense: async (req, res) => {
         try {
             const periodId = req.params.id;
