@@ -413,7 +413,6 @@ const periodController = {
             const imageFile = req.files.receiptImage;
             const base64Image = imageFile.data.toString('base64');
             
-            const axios = require('axios');
             const apiKey = process.env.COMET_API_KEY;
             const baseUrl = process.env.AI_VISION_BASE_URL || 'https://api.cometapi.com/v1';
             const model = process.env.AI_VISION_MODEL || 'gemini-3-flash';
@@ -460,15 +459,22 @@ const periodController = {
                 temperature: 0.1
             };
 
-            const response = await axios.post(`${baseUrl}/chat/completions`, payload, {
+            const response = await fetch(`${baseUrl}/chat/completions`, {
+                method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json'
                 },
-                timeout: 60000
+                body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(60000)
             });
 
-            let content = response.data.choices[0].message.content || "";
+            if (!response.ok) {
+                throw new Error(`AI API error: ${response.status} ${response.statusText}`);
+            }
+
+            const responseData = await response.json();
+            let content = responseData.choices[0].message.content || "";
             content = content.trim();
             
             let imageData;
