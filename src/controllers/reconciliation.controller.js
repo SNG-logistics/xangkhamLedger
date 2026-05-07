@@ -1,4 +1,3 @@
-const axios = require('axios');
 const fs = require('fs');
 const Expense = require('../models/expense.model');
 
@@ -77,15 +76,22 @@ exports.processImage = async (req, res) => {
             temperature: 0.1
         };
 
-        const response = await axios.post(`${baseUrl}/chat/completions`, payload, {
+        const response = await fetch(`${baseUrl}/chat/completions`, {
+            method: 'POST',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json'
             },
-            timeout: 60000 // 60s timeout
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(60000)
         });
 
-        let content = response.data.choices[0].message.content.trim();
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+
+        const responseData = await response.json();
+        let content = responseData.choices[0].message.content.trim();
         if (content.startsWith('```json')) content = content.substring(7);
         if (content.startsWith('```')) content = content.substring(3);
         if (content.endsWith('```')) content = content.slice(0, -3);
