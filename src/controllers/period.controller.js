@@ -91,6 +91,10 @@ const periodController = {
             const reconImageFile = path.join(__dirname, '../public/uploads', `recon_period_${periodId}.jpg`);
             const reconImageUrl = fs.existsSync(reconImageFile) ? `/uploads/recon_period_${periodId}.jpg` : null;
 
+            // Check for saved promo image for this period
+            const promoImageFile = path.join(__dirname, '../public/uploads', `promo_period_${periodId}.jpg`);
+            const promoImageUrl = fs.existsSync(promoImageFile) ? `/uploads/promo_period_${periodId}.jpg` : null;
+
             res.render('periods/detail', {
                 period,
                 summary: summary || {},
@@ -102,6 +106,7 @@ const periodController = {
                 bankTotal,
                 expenseSummary,
                 reconImageUrl,
+                promoImageUrl,
                 money
             });
         } catch (error) {
