@@ -398,6 +398,22 @@
 
                                 <!-- Upload Zone -->
                                 <div class="recon-upload-zone" id="reconUploadZone">
+
+                                    <% if (locals.reconImageUrl) { %>
+                                    <!-- Saved Image Shortcut -->
+                                    <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:rgba(139,92,246,0.12);border-radius:10px;margin-bottom:12px;border:1px solid rgba(139,92,246,0.25);">
+                                        <img src="<%= reconImageUrl %>" alt="รูปล่าสุด" style="width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,0.15);">
+                                        <div style="flex:1;min-width:0;">
+                                            <div style="font-size:0.78rem;color:rgba(255,255,255,0.5);margin-bottom:2px;">รูปที่บันทึกไว้</div>
+                                            <div style="font-size:0.82rem;color:#c4b5fd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">recon_period_<%= period.id %>.jpg</div>
+                                        </div>
+                                        <button type="button" onclick="submitReconcileWithSaved()" style="flex-shrink:0;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:0.8rem;cursor:pointer;font-weight:600;white-space:nowrap;">
+                                            <i class="fas fa-bolt"></i> ตรวจด้วยรูปเดิม
+                                        </button>
+                                    </div>
+                                    <div style="text-align:center;font-size:0.75rem;color:rgba(255,255,255,0.3);margin-bottom:8px;">— หรืออัพโหลดรูปใหม่ด้านล่าง —</div>
+                                    <% } %>
+
                                     <form id="reconcileForm" onsubmit="submitReconcile(event)">
                                         <label for="reconcileImage" class="recon-drop-label" id="reconDropLabel">
                                             <div class="recon-drop-icon">
@@ -405,7 +421,7 @@
                                             </div>
                                             <p class="recon-drop-text">วางหรือคลิกเพื่อเลือกรูปบิล / สรุปยอด</p>
                                             <p class="recon-drop-hint">รองรับ JPG, PNG, WEBP</p>
-                                            <input type="file" id="reconcileImage" name="receiptImage" accept="image/*" required style="display:none;" onchange="handleReconFileSelect(this)">
+                                            <input type="file" id="reconcileImage" name="receiptImage" accept="image/*" <% if (!locals.reconImageUrl) { %>required<% } %> style="display:none;" onchange="handleReconFileSelect(this)">
                                         </label>
                                         <div id="reconFilePreview" style="display:none;" class="recon-file-preview">
                                             <i class="fas fa-check-circle" style="color:#4ade80;"></i>
@@ -893,11 +909,20 @@
                                 }
 
                                 document.addEventListener('DOMContentLoaded', function () {
-                                    // Check for Permalinks (Auto-open Modal)
                                     const urlParams = new URLSearchParams(window.location.search);
-                                    if (urlParams.get('action') === 'new_incident') {
-                                        showModal('incidentModal');
-                                    }
+                                    if (urlParams.get('action') === 'new_incident') showModal('incidentModal');
+
+                                    // Restore last reconciliation results from localStorage
+                                    try {
+                                        const saved = localStorage.getItem('recon_<%= period.id %>');
+                                        if (saved) {
+                                            const parsed = JSON.parse(saved);
+                                            renderReconResults(parsed.r);
+                                            const ts = parsed.ts ? new Date(parsed.ts).toLocaleString('th-TH') : '';
+                                            const bar = document.getElementById('reconRecheckBar');
+                                            if (bar) bar.querySelector('span').innerHTML = '<i class="fas fa-history" style="margin-right:6px;"></i>ผลตรวจล่าสุด: ' + ts;
+                                        }
+                                    } catch(e) { localStorage.removeItem('recon_<%= period.id %>'); }
                                 });
 
                                 async function submitReconcile(e) {
@@ -905,7 +930,7 @@
                                     const btn = document.getElementById('reconcileBtn');
                                     const fileInput = document.getElementById('reconcileImage');
                                     const resultsArea = document.getElementById('reconcileResults');
-                                    
+
                                     if (!fileInput.files[0]) return;
 
                                     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังวิเคราะห์...';
@@ -915,86 +940,73 @@
                                     const formData = new FormData();
                                     formData.append('receiptImage', fileInput.files[0]);
 
+                                    await _runReconcile(formData, btn, resultsArea);
+                                }
+
+                                async function submitReconcileWithSaved() {
+                                    const resultsArea = document.getElementById('reconcileResults');
+                                    const savedBtn = event.target.closest('button');
+                                    const origText = savedBtn.innerHTML;
+                                    savedBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังวิเคราะห์...';
+                                    savedBtn.disabled = true;
+                                    resultsArea.style.display = 'none';
+
+                                    const formData = new FormData();
+                                    formData.append('useSavedImage', 'true');
+
+                                    await _runReconcile(formData, savedBtn, resultsArea, origText);
+                                }
+
+                                function renderReconResults(r) {
+                                    const fmt = (n) => new Intl.NumberFormat('lo-LA').format(n);
+                                    const cats = ['1. จ่ายทั่วไป','2.1 โปรโมชั่นใช้เครดิต','2.2 โปรโมชั่นเงินสด','3. กิจกรรม/การตลาด','4. ธนาคาร','5. ภาษีอากร','6. โยนของ'];
+                                    let htmlMissingSys = r.missingInSystem.length === 0 ? '<p class="text-success m-0">ไม่มีข้อมูลตกหล่น</p>' : '<table class="table table-sm m-0" style="vertical-align:middle"><tbody>';
+                                    r.missingInSystem.forEach((i, idx) => {
+                                        const safeCategory = i.category.replace(/'/g, "\\'");
+                                        const opts = cats.map(v => `<option value="${v}">${v}</option>`).join('');
+                                        htmlMissingSys += `<tr><td><div style="font-size:0.8rem;margin-bottom:4px;color:#555">${i.category}</div><select id="quickCat_${idx}" class="form-control form-control-sm" style="font-size:0.75rem;height:26px;padding:2px 8px;width:100%">${opts}</select></td><td class="text-end text-danger" style="vertical-align:middle">${fmt(i.amount)}</td><td class="text-end" style="width:70px;vertical-align:middle"><button type="button" class="btn btn-sm btn-outline-success py-0 px-2" style="font-size:0.75rem" onclick="quickAddExpenseWithSelect('quickCat_${idx}','${safeCategory}',${i.amount},this)">+ เพิ่ม</button></td></tr>`;
+                                    });
+                                    if (r.missingInSystem.length > 0) htmlMissingSys += '</tbody></table>';
+                                    document.getElementById('resMissingSystem').innerHTML = htmlMissingSys;
+                                    document.getElementById('badgeMissingSys').textContent = r.missingInSystem.length;
+
+                                    let htmlMissingImg = r.missingInImage.length === 0 ? '<p class="text-success m-0">ข้อมูลครบถ้วน</p>' : '<table class="table table-sm m-0"><tbody>';
+                                    r.missingInImage.forEach(i => htmlMissingImg += `<tr><td>${i.category}</td><td class="text-end text-warning">${fmt(i.system_amount)}</td></tr>`);
+                                    if (r.missingInImage.length > 0) htmlMissingImg += '</tbody></table>';
+                                    document.getElementById('resMissingImage').innerHTML = htmlMissingImg;
+                                    document.getElementById('badgeMissingImg').textContent = r.missingInImage.length;
+
+                                    let htmlDisc = r.discrepancies.length === 0 ? '<p class="text-success m-0">ยอดเงินตรงกันทุกรายการ!</p>' : '<table class="table table-sm m-0"><thead><tr><th>Category</th><th class="text-end">Image</th><th class="text-end">System</th><th class="text-end">Diff</th></tr></thead><tbody>';
+                                    r.discrepancies.forEach(i => htmlDisc += `<tr><td>${i.category}</td><td class="text-end">${fmt(i.image_amount)}</td><td class="text-end">${fmt(i.system_amount)}</td><td class="text-end text-danger">${fmt(i.difference)}</td></tr>`);
+                                    if (r.discrepancies.length > 0) htmlDisc += '</tbody></table>';
+                                    document.getElementById('resDiscrepancies').innerHTML = htmlDisc;
+                                    document.getElementById('badgeDisc').textContent = r.discrepancies.length;
+
+                                    const p = r.promotions;
+                                    document.getElementById('resPromotions').innerHTML = `<div class="row"><div class="col-4"><b>รูปภาพ</b><br>${fmt(p.image_total)}</div><div class="col-4"><b>ระบบ</b><br>${fmt(p.system_total)}</div><div class="col-4"><b class="${p.difference!==0?'text-danger':'text-success'}">ผลต่าง</b><br><span class="${p.difference!==0?'text-danger':'text-success'}">${fmt(p.difference)}</span></div></div>${p.needs_cross_day_check?'<div class="alert alert-warning mt-2 mb-0 py-1" style="font-size:0.85rem">⚠️ ยอดโปรโมชั่นในรูปสูงกว่าในระบบ อาจมีโปรโมชั่นข้ามวัน</div>':''}`;
+
+                                    document.getElementById('reconcileResults').style.display = 'block';
+                                    document.getElementById('reconUploadZone').style.display = 'none';
+                                    document.getElementById('reconRecheckBar').style.display = 'flex';
+                                }
+
+                                async function _runReconcile(formData, btn, resultsArea, btnResetText = null) {
                                     try {
-                                        const res = await fetch('/periods/<%= period.id %>/reconcile', {
-                                            method: 'POST',
-                                            body: formData
-                                        });
+                                        const res = await fetch('/periods/<%= period.id %>/reconcile', { method: 'POST', body: formData });
                                         const data = await res.json();
-                                        
                                         if (data.error) throw new Error(data.error);
-
-                                        // Render Results
                                         const r = data.results;
-                                        const fmt = (n) => new Intl.NumberFormat('lo-LA').format(n);
-
-                                        // Missing in System
-                                        let htmlMissingSys = r.missingInSystem.length === 0 ? '<p class="text-success m-0">ไม่มีข้อมูลตกหล่น</p>' : '<table class="table table-sm m-0" style="vertical-align: middle;"><tbody>';
-                                        r.missingInSystem.forEach((i, idx) => {
-                                            const safeCategory = i.category.replace(/'/g, "\\'"); // escape quotes
-                                            const catOptions = `
-                                                <option value="1. จ่ายทั่วไป">1. จ่ายทั่วไป</option>
-                                                <option value="2.1 โปรโมชั่นใช้เครดิต">2.1 โปรโมชั่นใช้เครดิต</option>
-                                                <option value="2.2 โปรโมชั่นเงินสด">2.2 โปรโมชั่นเงินสด</option>
-                                                <option value="3. กิจกรรม/การตลาด">3. กิจกรรม/การตลาด</option>
-                                                <option value="4. ธนาคาร">4. ธนาคาร</option>
-                                                <option value="5. ภาษีอากร">5. ภาษีอากร</option>
-                                                <option value="6. โยนของ">6. โยนของ</option>
-                                            `;
-                                            htmlMissingSys += `
-                                                <tr>
-                                                    <td>
-                                                        <div style="font-size: 0.8rem; margin-bottom: 4px; color: #555;">${i.category}</div>
-                                                        <select id="quickCat_${idx}" class="form-control form-control-sm" style="font-size: 0.75rem; height: 26px; padding: 2px 8px; width: 100%;">
-                                                            ${catOptions}
-                                                        </select>
-                                                    </td>
-                                                    <td class="text-end text-danger" style="vertical-align: middle;">${fmt(i.amount)}</td>
-                                                    <td class="text-end" style="width: 70px; vertical-align: middle;">
-                                                        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2" style="font-size: 0.75rem;" onclick="quickAddExpenseWithSelect('quickCat_${idx}', '${safeCategory}', ${i.amount}, this)">+ เพิ่ม</button>
-                                                    </td>
-                                                </tr>
-                                            `;
-                                        });
-                                        if (r.missingInSystem.length > 0) htmlMissingSys += '</tbody></table>';
-                                        document.getElementById('resMissingSystem').innerHTML = htmlMissingSys;
-                                        document.getElementById('badgeMissingSys').textContent = r.missingInSystem.length;
-
-                                        // Missing in Image
-                                        let htmlMissingImg = r.missingInImage.length === 0 ? '<p class="text-success m-0">ข้อมูลครบถ้วน</p>' : '<table class="table table-sm m-0"><tbody>';
-                                        r.missingInImage.forEach(i => htmlMissingImg += `<tr><td>${i.category}</td><td class="text-end text-warning">${fmt(i.system_amount)}</td></tr>`);
-                                        if (r.missingInImage.length > 0) htmlMissingImg += '</tbody></table>';
-                                        document.getElementById('resMissingImage').innerHTML = htmlMissingImg;
-                                        document.getElementById('badgeMissingImg').textContent = r.missingInImage.length;
-
-                                        // Discrepancies
-                                        let htmlDisc = r.discrepancies.length === 0 ? '<p class="text-success m-0">ยอดเงินตรงกันทุกรายการ!</p>' : '<table class="table table-sm m-0"><thead><tr><th>Category</th><th class="text-end">Image</th><th class="text-end">System</th><th class="text-end">Diff</th></tr></thead><tbody>';
-                                        r.discrepancies.forEach(i => htmlDisc += `<tr><td>${i.category}</td><td class="text-end">${fmt(i.image_amount)}</td><td class="text-end">${fmt(i.system_amount)}</td><td class="text-end text-danger">${fmt(i.difference)}</td></tr>`);
-                                        if (r.discrepancies.length > 0) htmlDisc += '</tbody></table>';
-                                        document.getElementById('resDiscrepancies').innerHTML = htmlDisc;
-                                        document.getElementById('badgeDisc').textContent = r.discrepancies.length;
-
-                                        // Promotions
-                                        const p = r.promotions;
-                                        document.getElementById('resPromotions').innerHTML = `
-                                            <div class="row">
-                                                <div class="col-4"><b>รูปภาพ (Image)</b><br>${fmt(p.image_total)}</div>
-                                                <div class="col-4"><b>ระบบ (System)</b><br>${fmt(p.system_total)}</div>
-                                                <div class="col-4"><b class="${p.difference !== 0 ? 'text-danger' : 'text-success'}">ผลต่าง (Diff)</b><br><span class="${p.difference !== 0 ? 'text-danger' : 'text-success'}">${fmt(p.difference)}</span></div>
-                                            </div>
-                                            ${p.needs_cross_day_check ? '<div class="alert alert-warning mt-2 mb-0 py-1" style="font-size: 0.85rem;">⚠️ ยอดโปรโมชั่นในรูปสูงกว่าในระบบ อาจมีโปรโมชั่นข้ามวัน</div>' : ''}
-                                        `;
-
-                                        resultsArea.style.display = 'block';
-                                        // Hide upload zone — keep results persistent when modal reopens
-                                        document.getElementById('reconUploadZone').style.display = 'none';
-                                        document.getElementById('reconRecheckBar').style.display = 'flex';
+                                        renderReconResults(r);
+                                        // Save to localStorage — persist across page refreshes
+                                        localStorage.setItem('recon_<%= period.id %>', JSON.stringify({ r, ts: Date.now() }));
+                                        const ts = new Date().toLocaleString('th-TH');
+                                        const bar = document.getElementById('reconRecheckBar');
+                                        if (bar) bar.querySelector('span').innerHTML = '<i class="fas fa-history" style="margin-right:6px;"></i>ผลตรวจล่าสุด: ' + ts;
                                     } catch (err) {
                                         alert('เกิดข้อผิดพลาด: ' + err.message);
-                                        btn.innerHTML = '<i class="fas fa-search-dollar"></i> เริ่มตรวจสอบ';
-                                        btn.disabled = false;
+                                        if (btnResetText) btn.innerHTML = btnResetText;
+                                        else btn.innerHTML = '<i class="fas fa-search-dollar"></i> เริ่มตรวจสอบ';
                                     } finally {
-                                        // Only re-enable btn — don't reset UI so state stays persistent
                                         btn.disabled = false;
                                     }
                                 }

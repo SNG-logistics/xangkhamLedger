@@ -10,6 +10,8 @@ const Setting = require('../models/setting.model');
 const audit = require('../utils/audit');
 const money = require('../utils/money'); // Ensure money util is imported if used in render
 const lineService = require('../services/line.service');
+const fs = require('fs');
+const path = require('path');
 
 const periodController = {
     list: async (req, res) => {
@@ -85,6 +87,10 @@ const periodController = {
                 total_lak: bankBalances.reduce((sum, b) => sum + (parseFloat(b.balance_lak) || 0), 0)
             };
 
+            // Check for saved recon image for this period
+            const reconImageFile = path.join(__dirname, '../public/uploads', `recon_period_${periodId}.jpg`);
+            const reconImageUrl = fs.existsSync(reconImageFile) ? `/uploads/recon_period_${periodId}.jpg` : null;
+
             res.render('periods/detail', {
                 period,
                 summary: summary || {},
@@ -95,6 +101,7 @@ const periodController = {
                 expenseTotal,
                 bankTotal,
                 expenseSummary,
+                reconImageUrl,
                 money
             });
         } catch (error) {
@@ -406,12 +413,26 @@ const periodController = {
     reconcileImage: async (req, res) => {
         try {
             const periodId = req.params.id;
-            if (!req.files || !req.files.receiptImage) {
+            const savedImagePath = path.join(__dirname, '../public/uploads', `recon_period_${periodId}.jpg`);
+
+            let base64Image, mimeType;
+
+            if (req.body.useSavedImage === 'true') {
+                // Re-use the previously saved image — no need to re-upload
+                if (!fs.existsSync(savedImagePath)) {
+                    return res.status(400).json({ error: 'ไม่พบรูปที่บันทึกไว้ กรุณาอัปโหลดใหม่' });
+                }
+                base64Image = fs.readFileSync(savedImagePath).toString('base64');
+                mimeType = 'image/jpeg';
+            } else if (req.files && req.files.receiptImage) {
+                // New upload — save it for future re-use
+                const imageFile = req.files.receiptImage;
+                base64Image = imageFile.data.toString('base64');
+                mimeType = imageFile.mimetype;
+                fs.writeFileSync(savedImagePath, imageFile.data);
+            } else {
                 return res.status(400).json({ error: 'กรุณาอัปโหลดรูปภาพ' });
             }
-
-            const imageFile = req.files.receiptImage;
-            const base64Image = imageFile.data.toString('base64');
             
             const apiKey = process.env.COMET_API_KEY;
             const baseUrl = process.env.AI_VISION_BASE_URL || 'https://api.cometapi.com/v1';
@@ -451,7 +472,7 @@ const periodController = {
                         role: "user",
                         content: [
                             { type: "text", text: prompt },
-                            { type: "image_url", image_url: { url: `data:${imageFile.mimetype};base64,${base64Image}` } }
+                            { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Image}` } }
                         ]
                     }
                 ],
