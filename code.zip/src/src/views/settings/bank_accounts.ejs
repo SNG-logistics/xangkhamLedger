@@ -1,0 +1,232 @@
+<%- include('../layout', { title: title }) %>
+
+    <div class="card">
+        <div class="flex-between">
+            <h2>จัดการบัญชีธนาคาร</h2>
+            <% if (user && user.role==='SUPER_ADMIN' ) { %>
+                <button class="btn btn-primary" onclick="showModal('createAccountModal')">เพิ่มบัญชีใหม่</button>
+                <% } %>
+        </div>
+
+        <div class="table-container mt-20">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ธนาคาร</th>
+                        <th>ชื่อบัญชี</th>
+                        <th>เลขบัญชี</th>
+                        <th>ประเภท</th>
+                        <th>สถานะ</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% accounts.forEach(account=> { %>
+                        <tr>
+                            <td>
+                                <%= account.bank_name %>
+                            </td>
+                            <td>
+                                <%= account.account_name %>
+                            </td>
+                            <td>
+                                <%= account.account_number %>
+                            </td>
+                            <td><span class="badge">
+                                    <%= account.type %>
+                                </span></td>
+                            <td>
+                                <span class="status-badge <%= account.is_active ? 'status-open' : 'status-locked' %>">
+                                    <%= account.is_active ? 'Active' : 'Inactive' %>
+                                </span>
+                            </td>
+                            <td>
+                                <% if (user && user.role==='SUPER_ADMIN' ) { %>
+                                    <button class="btn btn-sm btn-secondary"
+                                        onclick='editAccount(<%- JSON.stringify(account) %>)'>แก้ไข</button>
+                                    <button class="btn btn-sm btn-danger"
+                                        onclick="deleteAccount('<%= account.id %>')">ลบ</button>
+                                    <% } %>
+                            </td>
+                        </tr>
+                        <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div id="createAccountModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 id="modalTitle">เพิ่มบัญชีใหม่</h3>
+            <form id="accountForm">
+                <input type="hidden" id="accountId">
+
+                <div class="form-group">
+                    <label>ธนาคาร (Bank Name)</label>
+                    <input type="text" id="bankName" class="form-control" placeholder="e.g. BCEL ONE, LDB" required>
+                </div>
+
+                <div class="form-group">
+                    <label>ชื่อบัญชี (Account Name)</label>
+                    <input type="text" id="accountName" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label>เลขบัญชี (Account Unknown)</label>
+                    <input type="text" id="accountNumber" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label>ประเภท (Type)</label>
+                    <select id="accountType" class="form-control">
+                        <option value="MAIN">MAIN (บัญชีหลัก)</option>
+                        <option value="TAX">TAX (ภาษี)</option>
+                        <option value="BROKER">BROKER (โบรกเกอร์)</option>
+                        <option value="OTHER" selected>OTHER (อื่นๆ)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="statusGroup" style="display:none;">
+                    <label>สถานะ</label>
+                    <select id="isActive" class="form-control">
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="hideModal('createAccountModal')">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div id="deleteAccountModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>ยืนยันการลบ Master File</h3>
+            <p class="text-danger">การลบนี้จะปิดการใช้งานบัญชีนี้ (Soft Delete)</p>
+            <form id="deleteForm">
+                <input type="hidden" id="deleteAccountId">
+                <div class="form-group">
+                    <label>เหตุผล (Reason) <span class="text-danger">*</span></label>
+                    <textarea id="deleteReason" class="form-control" rows="3" required
+                        placeholder="ระบุเหตุผลที่ต้องการลบ..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="hideModal('deleteAccountModal')">ยกเลิก</button>
+                    <button type="submit" class="btn btn-danger">ยืนยันลบ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function editAccount(account) {
+            document.getElementById('modalTitle').innerText = 'แก้ไขบัญชี';
+            document.getElementById('accountId').value = account.id;
+            document.getElementById('bankName').value = account.bank_name;
+            document.getElementById('accountName').value = account.account_name;
+            document.getElementById('accountNumber').value = account.account_number;
+            document.getElementById('accountType').value = account.type;
+
+            // Show status field for edit
+            document.getElementById('statusGroup').style.display = 'block';
+            document.getElementById('isActive').value = account.is_active.toString();
+
+            showModal('createAccountModal');
+        }
+
+        document.getElementById('accountForm').onsubmit = async (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('accountId').value;
+            const data = {
+                bank_name: document.getElementById('bankName').value,
+                account_name: document.getElementById('accountName').value,
+                account_number: document.getElementById('accountNumber').value,
+                type: document.getElementById('accountType').value,
+                is_active: document.getElementById('isActive').value
+            };
+
+            const url = id ? `/settings/bank-accounts/${id}` : '/settings/bank-accounts';
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert(result.error);
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Error connecting to server');
+            }
+        };
+
+        function deleteAccount(id) {
+            document.getElementById('deleteAccountId').value = id;
+            document.getElementById('deleteReason').value = '';
+            showModal('deleteAccountModal');
+        }
+
+        document.getElementById('deleteForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('deleteAccountId').value;
+            const reason = document.getElementById('deleteReason').value;
+
+            if (!reason) {
+                alert('กรุณาระบุเหตุผล');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/settings/bank-accounts/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert(result.error);
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Error connecting to server');
+            }
+        };
+
+        // Reset form when opening for create (override showModal logic if needed, or manual)
+        const originalShowModal = window.showModal;
+        window.showModal = function (id) {
+            if (id === 'createAccountModal' && !document.getElementById('accountId').value) {
+                // It's a Create action (if ID is empty, which we clear manually on 'Add' btn click preferably)
+                // But simpler: Add New Button should clear first.
+            }
+            document.getElementById(id).style.display = 'flex';
+        }
+
+        // Bind Add button clear
+        document.querySelector('.btn-primary[onclick*="createAccountModal"]').onclick = function () {
+            document.getElementById('modalTitle').innerText = 'เพิ่มบัญชีใหม่';
+            document.getElementById('accountId').value = '';
+            document.getElementById('bankName').value = '';
+            document.getElementById('accountName').value = '';
+            document.getElementById('accountNumber').value = '';
+            document.getElementById('accountType').value = 'OTHER';
+            document.getElementById('statusGroup').style.display = 'none';
+            showModal('createAccountModal');
+        };
+    </script>

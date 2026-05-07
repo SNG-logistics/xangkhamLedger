@@ -9,6 +9,7 @@ const Journal = require('../models/journal.model'); // Added missing import
 const Setting = require('../models/setting.model');
 const audit = require('../utils/audit');
 const money = require('../utils/money'); // Ensure money util is imported if used in render
+const lineService = require('../services/line.service');
 
 const periodController = {
     list: async (req, res) => {
@@ -47,6 +48,43 @@ const periodController = {
             const bankBalances = await BankBalance.getByPeriod(periodId);
             const incidents = await Incident.findByPeriod(periodId);
 
+            // Calculate Expense Summary by Category
+            const expenseSummary = {
+                '1. จ่ายทั่วไป': 0,
+                '2.1 โปรโมชั่นใช้เครดิต': 0,
+                '2.2 โปรโมชั่นเงินสด': 0,
+                '3. กิจกรรม/การตลาด': 0,
+                '4. ธนาคาร': 0,
+                '5. ภาษีอากร': 0,
+                '6. โยนของ': 0,
+                // Legacy support
+                '2. โปรโมชันเงินสด': 0,
+                '3. โปรโมชันใช้เครดิต': 0,
+                '2. โปร': 0
+            };
+
+            expenses.forEach(exp => {
+                if (expenseSummary[exp.category] !== undefined) {
+                    expenseSummary[exp.category] += parseFloat(exp.amount_lak) || 0;
+                } else {
+                    // Fallback for unrecognized categories
+                    expenseSummary['1. จ่ายทั่วไป'] += parseFloat(exp.amount_lak) || 0;
+                }
+            });
+
+            // Calculate parent category "2. รวมโปรโมชั่น"
+            expenseSummary['2. รวมโปรโมชั่น'] =
+                expenseSummary['2.1 โปรโมชั่นใช้เครดิต'] +
+                expenseSummary['2.2 โปรโมชั่นเงินสด'] +
+                expenseSummary['2. โปรโมชันเงินสด'] +  // Legacy
+                expenseSummary['3. โปรโมชันใช้เครดิต'] + // Legacy
+                expenseSummary['2. โปร'];  // Legacy
+
+            // Calculate Bank Total
+            const bankTotal = {
+                total_lak: bankBalances.reduce((sum, b) => sum + (parseFloat(b.balance_lak) || 0), 0)
+            };
+
             res.render('periods/detail', {
                 period,
                 summary: summary || {},
@@ -55,7 +93,8 @@ const periodController = {
                 incidents,
                 journals,
                 expenseTotal,
-                bankTotal: {},
+                bankTotal,
+                expenseSummary,
                 money
             });
         } catch (error) {
@@ -73,10 +112,9 @@ const periodController = {
             const backfillMode = await Setting.get('BACKFILL_MODE');
             const isBackfill = backfillMode === 'ON';
 
-            // Validation: Allow only Mon(1), Wed(3), Fri(5)
-            // Enforced for both Normal and Backfill modes as per user request
-            if (![1, 3, 5].includes(dayOfWeek)) {
-                return res.status(400).send('อนุญาตให้สร้างงวดเฉพาะวัน จันทร์, พุธ, ศุกร์ เท่านั้น');
+            // Validation: Allow only weekdays Mon(1)-Fri(5)
+            if (![1, 2, 3, 4, 5].includes(dayOfWeek)) {
+                return res.status(400).send('อนุญาตให้สร้างงวดเฉพาะวัน จันทร์, อังคาร, พุธ, พฤหัสบดี, ศุกร์ เท่านั้น');
             }
 
             // Allow creation on any day if Backfill Mode is ON
@@ -110,8 +148,11 @@ const periodController = {
 
             res.redirect('/periods');
         } catch (error) {
-            console.error(error);
-            res.status(500).send('Error creating period');
+            console.error('Create Period Error:', error);
+            if (error.code === 'ER_DUP_ENTRY') {
+                return res.status(400).send('มีงวดวันที่นี้อยู่แล้ว (Duplicate Date)');
+            }
+            res.status(500).send('Error creating period: ' + error.message);
         }
     },
 
@@ -178,10 +219,48 @@ const periodController = {
                 req.get('User-Agent')
             );
 
+            // Line Notify
+            try {
+                // Calculate Net Profit for Notification
+                const summary = await Summary.findByPeriod(periodId) || {};
+                const expenseTotal = await Expense.getTotalByPeriod(periodId);
+
+                const grossSales = (parseFloat(summary.sales_6_digit) || 0) +
+                    (parseFloat(summary.sales_5_digit) || 0) +
+                    (parseFloat(summary.sales_4_digit) || 0) +
+                    (parseFloat(summary.sales_3_digit) || 0) +
+                    (parseFloat(summary.sales_2_digit) || 0) +
+                    (parseFloat(summary.sales_1_digit) || 0);
+
+                const totalPrizes = (parseFloat(summary.prize_6_digit) || 0) +
+                    (parseFloat(summary.prize_5_digit) || 0) +
+                    (parseFloat(summary.prize_4_digit) || 0) +
+                    (parseFloat(summary.prize_3_digit) || 0) +
+                    (parseFloat(summary.prize_2_digit) || 0) +
+                    (parseFloat(summary.prize_1_digit) || 0);
+
+                const profitThrowing = parseFloat(summary.profit_throwing) || 0;
+                const totalExpenses = parseFloat(expenseTotal.total_lak) || 0;
+
+                const netProfit = grossSales - totalPrizes + profitThrowing - totalExpenses;
+
+                const lockerName = req.session.fullName || req.session.username || 'Admin';
+                const message = `\n🔒 งวดวันที่ ${new Date(period.period_date).toLocaleDateString('th-TH')} ถูก LOCKED แล้ว\n` +
+                    `โดย: ${lockerName}\n` +
+                    `ยอดสรุป (Net Profit): ${netProfit.toLocaleString()} LAK\n` +
+                    `เหตุผล: ${reason}\n` +
+                    `\n🔗 https://xangkhamledger.com/`;
+                await lineService.sendNotify(message);
+            } catch (notifyError) {
+                console.error('Line Notify Error:', notifyError);
+            }
+
+
+
             res.json({ success: true });
         } catch (error) {
             console.error(error);
-            res.status(500).json({ error: 'Error locking period' });
+            res.status(500).json({ error: 'Error locking period: ' + error.message });
         }
     },
 

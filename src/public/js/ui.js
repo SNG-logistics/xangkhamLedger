@@ -71,6 +71,26 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
+// Toast Helper
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+    }
+});
+
+function showToast(icon, title) {
+    Toast.fire({
+        icon: icon,
+        title: title
+    });
+}
+
 // Modal functions
 function showModal(modalId) {
     const modal = document.getElementById(modalId);
@@ -88,116 +108,222 @@ function hideModal(modalId) {
 
 // Lock/Unlock Period
 function lockPeriod(periodId) {
-    const reason = prompt('กรุณาระบุเหตุผลในการ LOCK งวดนี้:');
-    if (!reason || reason.trim() === '') {
-        alert('ต้องระบุเหตุผล!');
-        return;
-    }
-
-    fetch(`/periods/${periodId}/lock`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: reason })
-    })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                alert('LOCK งวดสำเร็จ!');
-                location.reload();
-            } else {
-                alert('Error: ' + (data.error || 'Unknown error'));
+    Swal.fire({
+        title: 'ระบุเหตุผลในการ LOCK',
+        input: 'text',
+        inputLabel: 'เหตุผล',
+        inputPlaceholder: 'ใส่เหตุผลที่นี่...',
+        showCancelButton: true,
+        confirmButtonText: 'Lock',
+        cancelButtonText: 'Cancel',
+        showLoaderOnConfirm: true,
+        preConfirm: (reason) => {
+            if (!reason) {
+                Swal.showValidationMessage('กรุณาระบุเหตุผล');
             }
-        })
-        .catch(err => {
-            alert('Error: ' + err.message);
-        });
+            return fetch(`/periods/${periodId}/lock`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason: reason })
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(error => { throw new Error(error.error || response.statusText) });
+                    }
+                    return response.json();
+                })
+                .catch(error => {
+                    Swal.showValidationMessage(`Request failed: ${error}`);
+                });
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Locked!',
+                text: 'งวดถูก LOCK เรียบร้อยแล้ว',
+                icon: 'success'
+            }).then(() => {
+                location.reload();
+            });
+        }
+    });
 }
 
 function unlockPeriod(periodId) {
-    const reason = prompt('กรุณาระบุเหตุผลในการ UNLOCK งวดนี้:');
-    if (!reason || reason.trim() === '') {
-        alert('ต้องระบุเหตุผล!');
-        return;
-    }
-
-    fetch(`/periods/${periodId}/unlock`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: reason })
-    })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                alert('UNLOCK งวดสำเร็จ!');
-                location.reload();
-            } else {
-                alert('Error: ' + (data.error || 'Unknown error'));
+    Swal.fire({
+        title: 'ระบุเหตุผลในการ UNLOCK',
+        input: 'text',
+        inputLabel: 'เหตุผล',
+        inputPlaceholder: 'ใส่เหตุผลที่นี่...',
+        showCancelButton: true,
+        confirmButtonText: 'Unlock',
+        cancelButtonText: 'Cancel',
+        showLoaderOnConfirm: true,
+        preConfirm: (reason) => {
+            if (!reason) {
+                Swal.showValidationMessage('กรุณาระบุเหตุผล');
             }
-        })
-        .catch(err => {
-            alert('Error: ' + err.message);
-        });
+            return fetch(`/periods/${periodId}/unlock`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason: reason })
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(error => { throw new Error(error.error || response.statusText) });
+                    }
+                    return response.json();
+                })
+                .catch(error => {
+                    Swal.showValidationMessage(`Request failed: ${error}`);
+                });
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Unlocked!',
+                text: 'งวดถูก UNLOCK เรียบร้อยแล้ว',
+                icon: 'success'
+            }).then(() => {
+                location.reload();
+            });
+        }
+    });
 }
 
 // Delete with confirmation
 function deleteExpense(id, periodId) {
-    if (!confirm('ต้องการลบรายการนี้หรือไม่?')) return;
-
-    fetch(`/expenses/${id}?period_id=${periodId}`, {
-        method: 'DELETE'
-    })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                alert('ลบสำเร็จ!');
-                location.href = '/periods/' + periodId;
-            } else {
-                alert('Error: ' + (data.error || 'Unknown error'));
-            }
-        })
-        .catch(err => {
-            alert('Error: ' + err.message);
-        });
+    Swal.fire({
+        title: 'ต้องการลบรายการนี้หรือไม่?',
+        text: "คุณไม่สามารถย้อนกลับการกระทำนี้ได้!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'ใช่, ลบเลย!',
+        cancelButtonText: 'ยกเลิก'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/expenses/${id}?period_id=${periodId}`, {
+                method: 'DELETE'
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire(
+                            'ลบสำเร็จ!',
+                            'รายการถูกลบแล้ว.',
+                            'success'
+                        ).then(() => {
+                            location.href = '/periods/' + periodId;
+                        });
+                    } else {
+                        Swal.fire(
+                            'Error!',
+                            data.error || 'เกิดข้อผิดพลาดในการลบ',
+                            'error'
+                        );
+                    }
+                })
+                .catch(err => {
+                    Swal.fire(
+                        'Error!',
+                        err.message,
+                        'error'
+                    );
+                });
+        }
+    });
 }
 
 function deleteBank(id, periodId) {
-    if (!confirm('ต้องการลบรายการนี้หรือไม่?')) return;
-
-    fetch(`/banks/${id}?period_id=${periodId}`, {
-        method: 'DELETE'
-    })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                alert('ลบสำเร็จ!');
-                location.href = '/periods/' + periodId;
-            } else {
-                alert('Error: ' + (data.error || 'Unknown error'));
-            }
-        })
-        .catch(err => {
-            alert('Error: ' + err.message);
-        });
+    Swal.fire({
+        title: 'ต้องการลบรายการนี้หรือไม่?',
+        text: "คุณไม่สามารถย้อนกลับการกระทำนี้ได้!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'ใช่, ลบเลย!',
+        cancelButtonText: 'ยกเลิก'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/banks/${id}?period_id=${periodId}`, {
+                method: 'DELETE'
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire(
+                            'ลบสำเร็จ!',
+                            'รายการถูกลบแล้ว.',
+                            'success'
+                        ).then(() => {
+                            location.href = '/periods/' + periodId;
+                        });
+                    } else {
+                        Swal.fire(
+                            'Error!',
+                            data.error || 'เกิดข้อผิดพลาดในการลบ',
+                            'error'
+                        );
+                    }
+                })
+                .catch(err => {
+                    Swal.fire(
+                        'Error!',
+                        err.message,
+                        'error'
+                    );
+                });
+        }
+    });
 }
 
 function deletePeriod(id) {
-    if (!confirm('ยืนยันลบงวดนี้?\n⚠️ คำเตือน: ข้อมูลทั้งหมดในงวด (รายรับ/รายจ่าย/ยอดธนาคาร) จะถูกลบถาวร!')) return;
-
-    fetch(`/periods/${id}`, {
-        method: 'DELETE'
-    })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                alert('ลบงวดสำเร็จ!');
-                location.reload();
-            } else {
-                alert('Error: ' + (data.error || 'Unknown error'));
-            }
-        })
-        .catch(err => {
-            alert('Error: ' + err.message);
-        });
+    Swal.fire({
+        title: 'ยืนยันลบงวดนี้?',
+        text: "⚠️ คำเตือน: ข้อมูลทั้งหมดในงวด (รายรับ/รายจ่าย/ยอดธนาคาร) จะถูกลบถาวร!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'ใช่, ลบทุกอย่าง!',
+        cancelButtonText: 'ยกเลิก'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/periods/${id}`, {
+                method: 'DELETE'
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire(
+                            'ลบสำเร็จ!',
+                            'งวดบัญชีถูกลบแล้ว.',
+                            'success'
+                        ).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire(
+                            'Error!',
+                            data.error || 'เกิดข้อผิดพลาดในการลบ',
+                            'error'
+                        );
+                    }
+                })
+                .catch(err => {
+                    Swal.fire(
+                        'Error!',
+                        err.message,
+                        'error'
+                    );
+                });
+        }
+    });
 }
 
 // Real-time total calculation

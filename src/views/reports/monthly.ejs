@@ -1,286 +1,570 @@
-<div class="report-header">
-    <div class="report-period">รายงานสรุปรายเดือน</div>
-    <% if (year && month) { %>
-        <div class="report-date">ปี <%= year %> / เดือน <%= month %>
-        </div>
-        <% } %>
-</div>
+<!DOCTYPE html>
+<html lang="th">
 
-<!-- Filter Form (Hidden on Print) -->
-<div class="card no-print">
-    <div class="card-header">
-        <h3>เลือกเดือน/ปี</h3>
-    </div>
-    <div class="card-body">
-        <form method="GET" action="/reports/monthly" class="flex gap-20">
+<head>
+    <meta charset="UTF-8">
+    <title>รายงานรายเดือน <%= year ? `${month}/${year}` : '' %>
+    </title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* RESET & BASE */
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+            font-size: 14px;
+        }
+
+        /* A4 PAPER SETUP */
+        @page {
+            size: A4;
+            margin: 15mm 15mm 15mm 15mm;
+        }
+
+        .paper {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 20px auto;
+            background: white;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            padding: 20mm;
+            position: relative;
+        }
+
+        /* PRINT MEDIA QUERY */
+        @media print {
+            body {
+                background: white;
+            }
+
+            .paper {
+                width: 100%;
+                margin: 0;
+                box-shadow: none;
+                padding: 0;
+                min-height: auto;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            tr,
+            td,
+            th,
+            div {
+                break-inside: avoid;
+            }
+        }
+
+        /* HEADER SECTION */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #b8860b;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .brand-section h1 {
+            margin: 0;
+            color: #1a1a1a;
+            font-weight: 700;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .brand-section .subtitle {
+            margin: 5px 0 0;
+            color: #666;
+            font-size: 16px;
+        }
+
+        .meta-section {
+            text-align: right;
+        }
+
+        .meta-item {
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #555;
+        }
+
+        .meta-value {
+            font-weight: 600;
+            color: #000;
+            margin-left: 10px;
+            font-size: 14px;
+        }
+
+        /* KPI CARDS */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            background: #fff;
+        }
+
+        .kpi-title {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .kpi-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .kpi-card.highlight {
+            background: #fff;
+            border: 2px solid #b8860b;
+        }
+
+        .kpi-card.highlight .kpi-title {
+            color: #666;
+        }
+
+        /* TABLES */
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            border-left: 4px solid #b8860b;
+            padding-left: 10px;
+            color: #333;
+            margin-top: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: #f8f9fa;
+            color: #444;
+            font-weight: 600;
+            text-align: left;
+            padding: 10px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-muted {
+            color: #888;
+        }
+
+        .font-bold {
+            font-weight: 600;
+        }
+
+        .row-total {
+            background-color: #fcfcfc;
+            font-weight: 700;
+        }
+
+        .row-grand-total {
+            background-color: transparent !important;
+            font-size: 16px;
+            font-weight: 700;
+            border-top: 2px solid #333;
+            border-bottom: 2px solid #333;
+        }
+
+        .row-stripe:nth-child(even) {
+            background-color: #fcfcfc;
+        }
+
+        /* FILTER FORM */
+        .filter-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            margin: 20px auto;
+            max-width: 800px;
+            display: flex;
+            gap: 20px;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-control {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Sarabun', sans-serif;
+            min-width: 150px;
+        }
+
+        /* BUTTONS */
+        .btn-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 50px;
+            font-family: 'Sarabun', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #1a1a1a;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #333;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #f0f0f0;
+        }
+
+        .footer {
+            margin-top: 40px;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+            font-size: 10px;
+            color: #999;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- FILTER FORM (Screen Only) -->
+    <div class="no-print">
+        <form method="GET" action="/reports/monthly" class="filter-card">
             <div class="form-group">
-                <label>ปี</label>
-                <input type="number" name="year" class="form-control" value="<%= year || 2025 %>" required>
+                <label>ปี (Year)</label>
+                <input type="number" name="year" class="form-control" value="<%= year || new Date().getFullYear() %>"
+                    required>
             </div>
             <div class="form-group">
-                <label>เดือน</label>
+                <label>เดือน (Month)</label>
                 <select name="month" class="form-control" required>
                     <% for(let m=1; m <=12; m++) { %>
-                        <option value="<%= m %>" <%=month==m ? 'selected' : '' %>><%= m %>
+                        <option value="<%= m %>" <%=month==m ? 'selected' : '' %>>
+                            <%= new Date(0, m-1).toLocaleString('th-TH', { month: 'long' }) %>
                         </option>
                         <% } %>
                 </select>
             </div>
-            <div class="form-group" style="display: flex; align-items: flex-end;">
-                <button type="submit" class="btn btn-primary">ดูรายงาน</button>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary"
+                    style="border-radius: 4px; padding: 10px 20px; box-shadow: none;">
+                    <i class="fas fa-search"></i> ดูรายงาน
+                </button>
             </div>
         </form>
     </div>
-</div>
 
-<% if (year && month && periods.length> 0) { %>
+    <!-- CONTROL BUTTONS -->
+    <div class="no-print btn-container">
+        <a href="/" class="btn btn-secondary">
+            <i class="fas fa-home"></i> หน้าหลัก
+        </a>
+        <% if (year && month && periods.length> 0) { %>
+            <button onclick="window.print()" class="btn btn-primary">
+                <i class="fas fa-print"></i> พิมพ์รายงาน / PDF
+            </button>
+            <% } %>
+    </div>
 
-    <!-- Print View (Hidden on Screen via CSS) -->
-    <div class="print-only section-summary">
-        <div class="print-header report-header">
-            <h1>รายงานสรุปรายเดือน</h1>
-            <p>เดือน <%= month %> / ปี <%= year %>
-            </p>
-        </div>
+    <% if (year && month && periods.length> 0) { %>
+        <div class="paper">
+            <!-- HEADER -->
+            <header class="report-header">
+                <div class="brand-section">
+                    <h1 style="margin-bottom: 5px;">XANGKHAM Ledger</h1>
+                    <h3 style="margin: 0; color: #b8860b; font-size: 18px; font-weight: 600;">
+                        ประจำเดือน <%= new Date(0, month-1).toLocaleString('th-TH', { month: 'long' }) %> ปี <%= year %>
+                    </h3>
+                    <p class="subtitle" style="margin-top: 5px;">รายงานสรุปรายเดือน (Monthly Report)</p>
+                </div>
+                <div class="meta-section">
+                    <div class="meta-item">
 
-        <div class="summary-card">
-            <div class="summary-title">📊 สรุปผลประกอบการ</div>
-            <table class="report-table">
+                    </div>
+                </div>
+            </header>
+
+
+
+            <!-- KPI CARDS -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-title">ยอดขายรวม</div>
+                    <div class="kpi-value">
+                        <%= money.format(totals.salesLak) %>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">ต้นทุนรางวัล</div>
+                    <div class="kpi-value" style="color: #c62828;">- <%= money.format(totals.prizesLak) %>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">ค่าใช้จ่ายรวม</div>
+                    <div class="kpi-value" style="color: #ef6c00;">- <%= money.format(totals.expensesLak) %>
+                    </div>
+                </div>
+                <div class="kpi-card highlight">
+                    <div class="kpi-title">กำไรสุทธิ (Net Profit)</div>
+                    <div class="kpi-value" style="color: <%= profitColor %>;">
+                        <%= profitSign %>
+                            <%= money.format(totals.netLak) %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN TABLE -->
+            <div class="section-title">สรุปผลประกอบการรวม (Overview)</div>
+            <table>
                 <thead>
                     <tr>
-                        <th style="width: 40%">รายการ</th>
-                        <th class="text-right">จำนวนเงิน (กีบ)</th>
-                        <th class="text-center" style="width: 15%">หมายเหตุ</th>
+                        <th style="width: 50%;">รายการ (Description)</th>
+                        <th class="text-right">จำนวนเงิน (LAK)</th>
+                        <th class="text-right" style="width: 25%;">หมายเหตุ</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>1. ยอดขายรวม</td>
-                        <td class="text-right primary-text">
+                    <tr class="row-stripe">
+                        <td>1. ยอดขายรวม (Total Sales)</td>
+                        <td class="text-right font-bold">
                             <%= money.format(totals.salesLak) %>
                         </td>
-                        <td></td>
+                        <td class="text-right text-muted"></td>
                     </tr>
-                    <tr>
-                        <td>2. หัก ยอดถูกรางวัล</td>
-                        <td class="text-right danger-text">- <%= money.format(totals.prizesLak) %>
+                    <tr class="row-stripe">
+                        <td>2. หัก จ่ายรางวัล (Prizes)</td>
+                        <td class="text-right" style="color: #c62828;">- <%= money.format(totals.prizesLak) %>
                         </td>
-                        <td></td>
+                        <td class="text-right text-muted"></td>
                     </tr>
-                    <tr class="row-highlight">
-                        <td style="font-weight: 500;">3. ยอดขายสุทธิ</td>
-                        <td class="text-right success-text" style="font-weight: 600;">
+                    <tr class="row-total">
+                        <td>3. ยอดขายสุทธิ (Net Sales) [1-2]</td>
+                        <td class="text-right">
                             <%= money.format(totals.salesLak - totals.prizesLak) %>
                         </td>
-                        <td class="text-center text-muted">(1 - 2)</td>
+                        <td class="text-right"></td>
                     </tr>
+                    <tr class="row-stripe">
+                        <td>4. หัก ค่าใช้จ่ายดำเนินงาน (Expenses)</td>
+                        <td class="text-right" style="color: #ef6c00;">- <%= money.format(totals.expensesLak) %>
+                        </td>
+                        <td class="text-right text-muted"></td>
+                    </tr>
+
+                    <!-- Spacer -->
                     <tr>
-                        <td>4. หัก ค่าใช้จ่าย</td>
-                        <td class="text-right danger-text">- <%= money.format(totals.expensesLak) %>
-                        </td>
-                        <td></td>
+                        <td colspan="3" style="border:none; height: 10px;"></td>
                     </tr>
-                    <tr class="total-row">
-                        <td>5. กำไรสุทธิ</td>
-                        <td class="text-right">
-                            <%= money.format(totals.netLak) %>
+
+                    <tr class="row-stripe">
+                        <td>5. บวก กำไรโยนหวย (Profit Throwing)</td>
+                        <td class="text-right" style="color: #27ae60;">+ <%= money.format(totals.profitThrowing) %>
                         </td>
-                        <td class="text-center">(3 - 4)</td>
+                        <td class="text-right text-muted"></td>
                     </tr>
+
+                    <tr class="row-grand-total">
+                        <td style="padding: 15px;">6. กำไรสุทธิ (Net Profit)</td>
+                        <td class="text-right" style="padding: 15px; color: <%= profitColor %>;">
+                            <%= profitSign %>
+                                <%= money.format(totals.netLak) %>
+                        </td>
+                        <td class="text-right" style="padding: 15px; color: #ccc;">(3-4+5)</td>
                 </tbody>
             </table>
-        </div>
 
-        <div class="summary-card" style="margin-top: 20px;">
-            <div class="summary-title">📅 รายละเอียดรายงวด</div>
-            <table class="report-table">
+            <!-- EXPENSE SUMMARY BY CATEGORY -->
+            <div class="section-title">สรุปค่าใช้จ่ายแยกประเภท (Expense Summary by Category)</div>
+            <table>
                 <thead>
                     <tr>
-                        <th style="text-align: center;">วันที่</th>
+                        <th style="width: 70%;">หมวดหมู่ (Category)</th>
+                        <th class="text-right">รวม LAK (Total LAK)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if(expenseSummary) { const categories=[ { name: '1. จ่ายทั่วไป' , key: '1. จ่ายทั่วไป' }, {
+                        name: '2. รวมโปรโมชั่น' , key: '2. รวมโปรโมชั่น' , children: [ {
+                        name: '  2.1 โปรโมชั่นใช้เครดิต' , key: '2.1 โปรโมชั่นใช้เครดิต' }, {
+                        name: '  2.2 โปรโมชั่นเงินสด' , key: '2.2 โปรโมชั่นเงินสด' } ]}, { name: '3. กิจกรรม/การตลาด' ,
+                        key: '3. กิจกรรม/การตลาด' }, { name: '4. ธนาคาร' , key: '4. ธนาคาร' }, { name: '5. ภาษีอากร' ,
+                        key: '5. ภาษีอากร' }, { name: '6. โยนของ' , key: '6. โยนของ' } ]; categories.forEach((cat)=> {
+                        const totalForCategory = expenseSummary[cat.key] || 0;
+                        %>
+                        <tr class="row-stripe">
+                            <td><strong>
+                                    <%= cat.name %>
+                                </strong></td>
+                            <td class="text-right">
+                                <%= money.format(totalForCategory) %>
+                            </td>
+                        </tr>
+                        <% if (cat.children) { cat.children.forEach(child=> { %>
+                            <tr class="row-stripe" style="background-color: #f9f9f9;">
+                                <td style="padding-left: 40px;">
+                                    <%= child.name %>
+                                </td>
+                                <td class="text-right">
+                                    <%= money.format(expenseSummary[child.key] || 0) %>
+                                </td>
+                            </tr>
+                            <% }); } %>
+                                <% }); } %>
+                                    <tr class="row-total">
+                                        <td class="text-right">รวมทั้งหมด</td>
+                                        <td class="text-right">
+                                            <%= money.format(totals.expensesLak) %>
+                                        </td>
+                                    </tr>
+                </tbody>
+            </table>
+
+            <!-- PERIOD DETAILS TABLE -->
+            <div class="section-title">รายละเอียดรายงวด (Period Details)</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">วันที่</th>
                         <th class="text-right">ยอดขาย</th>
-                        <th class="text-right">ถูกรางวัล</th>
+                        <th class="text-right">รางวัล</th>
+                        <th class="text-right">กำไรโยน</th>
                         <th class="text-right">ค่าใช้จ่าย</th>
-                        <th class="text-right">ยอดสรุป (Net)</th>
+                        <th class="text-right">กำไรสุทธิ (Net)</th>
                     </tr>
                 </thead>
                 <tbody>
                     <% periods.forEach(period=> {
-                        const net_profit = (parseFloat(period.gross_sales) || 0) - (parseFloat(period.total_prizes) ||
-                        0) - (parseFloat(period.total_expenses) || 0);
+                        const net_profit = (parseFloat(period.gross_sales) || 0) -
+                        (parseFloat(period.total_prizes) || 0) +
+                        (parseFloat(period.profit_throwing) || 0) -
+                        (parseFloat(period.total_expenses) || 0);
+                        const pColor = net_profit >= 0 ? '#2e7d32' : '#c62828';
                         %>
-                        <tr>
-                            <td style="text-align: center;">
-                                <%= new Date(period.period_date).toLocaleDateString('th-TH', { year: 'numeric' ,
-                                    month: 'numeric' , day: 'numeric' }) %>
+                        <tr class="row-stripe">
+                            <td>
+                                <%= new Date(period.period_date).toLocaleDateString('th-TH', { day: 'numeric' ,
+                                    month: 'short' }) %>
                             </td>
                             <td class="text-right">
                                 <%= money.format(period.gross_sales) %>
                             </td>
-                            <td class="text-right danger-text">
-                                -<%= money.format(period.total_prizes) %>
+                            <td class="text-right" style="color: #c62828;">- <%= money.format(period.total_prizes) %>
                             </td>
-                            <td class="text-right text-muted">
-                                -<%= money.format(period.total_expenses) %>
+                            <td class="text-right" style="color: #27ae60;">+ <%= money.format(period.profit_throwing) %>
                             </td>
-                            <td class="text-right <%= net_profit >= 0 ? 'success-text' : 'danger-text' %>"
-                                style="font-weight: bold;">
+                            <td class="text-right" style="color: #ef6c00;">- <%= money.format(period.total_expenses) %>
+                            </td>
+                            <td class="text-right font-bold" style="color: <%= pColor %>;">
                                 <%= money.format(net_profit) %>
                             </td>
                         </tr>
                         <% }) %>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Screen View (Hidden on Print) -->
-    <div class="no-print">
-
-        <!-- Summary Stats Grid -->
-        <div class="card mt-20">
-            <div class="card-header">
-                <h3>สรุปภาพรวม (Overview)</h3>
-            </div>
-            <div class="card-body">
-                <div class="stats-grid">
-                    <div class="stat-card lak">
-                        <h4>รวมยอดขาย (LAK)</h4>
-                        <div class="value text-primary">
-                            <%= money.format(totals.salesLak) %>
-                        </div>
-                    </div>
-                    <div class="stat-card lak">
-                        <h4>รวมยอดถูกรางวัล (LAK)</h4>
-                        <div class="value text-danger">- <%= money.format(totals.prizesLak) %>
-                        </div>
-                    </div>
-                    <div class="stat-card lak">
-                        <h4>รวมค่าใช้จ่าย (LAK)</h4>
-                        <div class="value text-warning">
-                            - <%= money.format(totals.expensesLak) %>
-                        </div>
-                    </div>
-                    <div class="stat-card lak">
-                        <h4>กำไรสุทธิ (LAK)</h4>
-                        <div class="value text-success">
-                            <%= money.format(totals.netLak) %>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Performance Summary Card -->
-        <div class="card mt-20">
-            <div class="card-header">
-                <h3>📊 สรุปผลประกอบการ (Breakdown)</h3>
-            </div>
-            <div class="card-body">
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 40%">รายการ</th>
-                                <th class="text-right">จำนวนเงิน (กีบ)</th>
-                                <th class="text-center" style="width: 15%">หมายเหตุ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>1. ยอดขายรวม</td>
-                                <td class="text-right text-primary" style="font-weight: bold;">
+                            <tr class="row-total">
+                                <td>รวมทั้งหมด</td>
+                                <td class="text-right">
                                     <%= money.format(totals.salesLak) %>
                                 </td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>2. หัก ยอดถูกรางวัล</td>
-                                <td class="text-right text-danger">- <%= money.format(totals.prizesLak) %>
+                                <td class="text-right">- <%= money.format(totals.prizesLak) %>
                                 </td>
-                                <td></td>
-                            </tr>
-                            <tr style="background-color: #f8f9fa;">
-                                <td style="font-weight: 500;">3. ยอดขายสุทธิ</td>
-                                <td class="text-right text-success" style="font-weight: 600;">
-                                    <%= money.format(totals.salesLak - totals.prizesLak) %>
+                                <td class="text-right">+ <%= money.format(totals.profitThrowing) %>
                                 </td>
-                                <td class="text-center text-muted">(1 - 2)</td>
-                            </tr>
-                            <tr>
-                                <td>4. หัก ค่าใช้จ่าย</td>
-                                <td class="text-right text-danger">- <%= money.format(totals.expensesLak) %>
+                                <td class="text-right">- <%= money.format(totals.expensesLak) %>
                                 </td>
-                                <td></td>
-                            </tr>
-                            <tr style="background-color: #eafaf1; border-top: 2px solid #2ecc71;">
-                                <td style="font-weight: bold; color: #27ae60;">5. กำไรสุทธิ</td>
-                                <td class="text-right" style="font-weight: bold; font-size: 1.2rem; color: #27ae60;">
+                                <td class="text-right">
                                     <%= money.format(totals.netLak) %>
                                 </td>
-                                <td class="text-center text-muted">(3 - 4)</td>
                             </tr>
-                        </tbody>
-                    </table>
+                </tbody>
+            </table>
+
+            <!-- FOOTER -->
+            <footer class="footer">
+                <div>
+                    System: XANGKHAM Ledger v1.1.0
                 </div>
-            </div>
-        </div>
-
-        <!-- Period Details Card -->
-        <div class="card mt-20">
-            <div class="card-header">
-                <h3>📅 รายละเอียดรายงวด</h3>
-            </div>
-            <div class="card-body">
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="text-align: center;">วันที่</th>
-                                <th class="text-right">ยอดขาย</th>
-                                <th class="text-right">ถูกรางวัล</th>
-                                <th class="text-right">ค่าใช้จ่าย</th>
-                                <th class="text-right">ยอดสรุป (Net)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% periods.forEach(period=> {
-                                const net_profit = (parseFloat(period.gross_sales) || 0) -
-                                (parseFloat(period.total_prizes) ||
-                                0) - (parseFloat(period.total_expenses) || 0);
-                                %>
-                                <tr>
-                                    <td style="text-align: center;">
-                                        <%= new Date(period.period_date).toLocaleDateString('th-TH', { year: 'numeric' ,
-                                            month: 'numeric' , day: 'numeric' }) %>
-                                    </td>
-                                    <td class="text-right">
-                                        <%= money.format(period.gross_sales) %>
-                                    </td>
-                                    <td class="text-right text-danger">
-                                        -<%= money.format(period.total_prizes) %>
-                                    </td>
-                                    <td class="text-right text-muted">
-                                        -<%= money.format(period.total_expenses) %>
-                                    </td>
-                                    <td class="text-right <%= net_profit >= 0 ? 'text-success' : 'text-danger' %>"
-                                        style="font-weight: bold;">
-                                        <%= money.format(net_profit) %>
-                                    </td>
-                                </tr>
-                                <% }) %>
-                        </tbody>
-                    </table>
+                <div>
+                    Printed: <%= new Date().toLocaleString('th-TH') %>
                 </div>
+            </footer>
+
+        </div>
+        <% } else if (year && month) { %>
+            <div style="text-align: center; margin-top: 50px; color: #666; font-family: 'Sarabun';">
+                <i class="fas fa-search" style="font-size: 48px; margin-bottom: 20px; color: #ddd;"></i>
+                <p>ไม่พบข้อมูลในเดือน/ปีที่เลือก</p>
             </div>
-        </div>
+            <% } %>
 
-        <div class="mt-20 flex gap-10" style="justify-content: center; margin-bottom: 50px;">
-            <button class="btn btn-primary" onclick="window.print()">
-                <i class="fas fa-print"></i> พิมพ์รายงาน
-            </button>
-        </div>
-    </div>
+</body>
 
-    <% } else if (year && month) { %>
-        <div class="alert alert-warning mt-20">ไม่พบข้อมูลในเดือน/ปีที่เลือก</div>
-        <% } %>
+</html>

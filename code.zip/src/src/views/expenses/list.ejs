@@ -1,0 +1,54 @@
+<!-- FILE: src/views/expenses/list.ejs -->
+<div class="card">
+    <div class="card-header">
+        <h3>ค่าใช้จ่ายทั้งหมด</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>เวลาเกิด</th>
+                        <th>งวดที่นับ</th>
+                        <th>ประเภท</th>
+                        <th>รายละเอียด</th>
+                        <th>LAK</th>
+                        <th>THB</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% expenses.forEach(exp=> { %>
+                        <tr>
+                            <td>
+                                <%= exp.id %>
+                            </td>
+                            <td>
+                                <%= exp.occurred_at %>
+                            </td>
+                            <td>
+                                <%= exp.accounting_period_id %>
+                            </td>
+                            <td>
+                                <%= exp.category %>
+                            </td>
+                            <td>
+                                <%= exp.description %>
+                            </td>
+                            <td class="money lak">
+                                <%= money.format(exp.amount_lak) %>
+                            </td>
+                            <td class="money thb">
+                                <%= money.formatHtml(exp.amount_thb, 'THB' ) %>
+                            </td>
+                        </tr>
+                        <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-20">
+    <a href="/periods/<%= periodId %>" class="btn btn-secondary">กลับ</a>
+</div>

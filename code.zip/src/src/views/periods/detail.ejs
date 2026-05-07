@@ -1,0 +1,461 @@
+<!-- FILE: src/views/periods/detail.ejs -->
+<% if (period.status==='LOCKED' ) { %>
+    <div class="alert alert-danger">
+        <strong>งวดนี้ถูก LOCK แล้ว!</strong> ไม่สามารถแก้ไขข้อมูลได้ กรุณา UNLOCK ก่อน
+    </div>
+    <% } %>
+
+        <div class="period-detail-header <%= period.status === 'LOCKED' ? 'locked' : '' %>">
+            <div class="flex-between">
+                <div>
+                    <h2>งวดวันที่ <%= new Date(period.period_date).toLocaleDateString('th-TH', { year: 'numeric' ,
+                            month: 'long' , day: 'numeric' }) %>
+                    </h2>
+                    <p>ปี <%= period.period_year %> / เดือน <%= period.period_month %> | ปิดยอดขายงวด 20.00.00 | เวลาออก
+                                20:25:00
+                    </p>
+                </div>
+                <div>
+                    <span class="status-badge <%= period.status === 'LOCKED' ? 'status-locked' : 'status-open' %>">
+                        <%= period.status %>
+                    </span>
+                </div>
+            </div>
+
+            <% const total_prizes=(parseFloat(summary.prize_6_digit) || 0) + (parseFloat(summary.prize_5_digit) || 0) +
+                (parseFloat(summary.prize_4_digit) || 0) + (parseFloat(summary.prize_3_digit) || 0) +
+                (parseFloat(summary.prize_2_digit) || 0) + (parseFloat(summary.prize_1_digit) || 0); const
+                gross_sales=(parseFloat(summary.sales_6_digit) || 0) + (parseFloat(summary.sales_5_digit) || 0) +
+                (parseFloat(summary.sales_4_digit) || 0) + (parseFloat(summary.sales_3_digit) || 0) +
+                (parseFloat(summary.sales_2_digit) || 0) + (parseFloat(summary.sales_1_digit) || 0); const
+                net_profit=gross_sales - total_prizes - (parseFloat(expenseTotal.total_lak) || 0); %>
+                <div class="period-info-grid">
+                    <div class="period-info-item">
+                        <h4>ยอดขาย LAK (Gross)</h4>
+                        <p class="money lak">
+                            <%= money.format(gross_sales) %>
+                        </p>
+                    </div>
+                    <div class="period-info-item">
+                        <h4>ยอดถูกรางวัล (Prizes)</h4>
+                        <p class="money thb" style="color: #d35400;">
+                            <%= money.format(total_prizes) %>
+                        </p>
+                    </div>
+                    <div class="period-info-item">
+                        <h4>ค่าใช้จ่าย LAK</h4>
+                        <p class="money lak">
+                            <%= money.format(expenseTotal.total_lak || 0) %>
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    style="margin-top: 20px; padding: 15px; background: #eafaf1; border-radius: 8px; border-left: 5px solid #2ecc71; text-align: left;">
+                    <h4 style="margin: 0; color: #27ae60; font-size: 1rem;">กำไรสุทธิ (Profit)</h4>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #2ecc71; margin: 5px 0;">
+                        <%= money.format(net_profit) %>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #27ae60; opacity: 0.8;">(Net Sales - Expenses)</div>
+                </div>
+
+                <div class="mt-20 flex gap-10">
+                    <% if (period.status==='OPEN' ) { %>
+                        <button class="btn btn-danger" onclick="lockPeriod(<%= period.id %>)">🔒 LOCK งวด</button>
+                        <% } else { %>
+                            <button class="btn btn-warning" onclick="unlockPeriod(<%= period.id %>)">🔓 UNLOCK
+                                งวด</button>
+                            <% } %>
+                                <a href="/reports/period/<%= period.id %>" class="btn btn-primary">📊 รายงานงวดนี้</a>
+                                <button class="btn btn-warning" onclick="showModal('incidentModal')">⚠️ แจ้งเคส</button>
+                </div>
+
+                <!-- Sales Summary -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>ยอดขาย</h3>
+                    </div>
+                    <div class="card-body">
+                        <% if (period.status==='OPEN' ) { %>
+                            <a href="/summaries/<%= period.id %>" class="btn btn-primary">บันทึกยอดขาย</a>
+                            <% } else { %>
+                                <p><strong>ยอดขาย LAK (Gross):</strong>
+                                    <%= money.format(gross_sales) %>
+                                </p>
+                                <p style="color: #d35400;"><strong>ยอดถูกรางวัล (Prizes):</strong>
+                                    <%= money.format(total_prizes) %>
+                                </p>
+                                <% if (summary.notes) { %>
+                                    <p><strong>หมายเหตุ:</strong>
+                                        <%= summary.notes %>
+                                    </p>
+                                    <% } %>
+                                        <% if (summary.attached_files) { let files=[]; try {
+                                            files=JSON.parse(summary.attached_files); } catch(e) {} if (files.length> 0)
+                                            { %>
+                                            <div style="margin-top: 10px;">
+                                                <strong>หลักฐานแนบ:</strong>
+                                                <% files.forEach((file, index)=> { %>
+                                                    <a href="/uploads/<%= file %>" target="_blank"
+                                                        style="color: #3498db; text-decoration: none; margin-right: 10px;">
+                                                        📄 ไฟล์ <%= index + 1 %>
+                                                    </a>
+                                                    <% }); %>
+                                            </div>
+                                            <% } } %>
+                                                <% } %>
+                    </div>
+                </div>
+
+                <!-- Expenses -->
+                <div class="card mt-20">
+                    <div class="card-header">
+                        <div class="flex-between">
+                            <h3>ค่าใช้จ่าย</h3>
+                            <% if (period.status==='OPEN' ) { %>
+                                <button class="btn btn-primary" onclick="showModal('addExpenseModal')">+
+                                    เพิ่มค่าใช้จ่าย</button>
+                                <% } %>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>เวลาเกิด</th>
+                                        <th>ประเภท</th>
+                                        <th>รายละเอียด</th>
+                                        <th>LAK</th>
+                                        <th>หลักฐาน</th>
+                                        <th>จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% expenses.forEach(exp=> { %>
+                                        <tr>
+                                            <td>
+                                                <%= new Date(exp.occurred_at).toLocaleString('th-TH', { year: 'numeric'
+                                                    , month: 'short' , day: 'numeric' , hour: '2-digit' ,
+                                                    minute: '2-digit' }) %>
+                                            </td>
+                                            <td>
+                                                <%= exp.category %>
+                                            </td>
+                                            <td>
+                                                <%= exp.description %>
+                                            </td>
+                                            <td class="money lak">
+                                                <%= money.format(exp.amount_lak) %>
+                                            </td>
+                                            <td>
+                                                <% if (exp.attached_files) { let files=[]; try {
+                                                    files=JSON.parse(exp.attached_files); } catch(e) {} if
+                                                    (files.length> 0) {
+                                                    %>
+                                                    <a href="/uploads/<%= files[0] %>" target="_blank"
+                                                        style="color: #3498db; text-decoration: none;">📄 ดูรูป</a>
+                                                    <% if(files.length> 1) { %><small style="color: #7f8c8d;">(+<%=
+                                                                files.length - 1 %>)</small>
+                                                        <% } %>
+                                                            <% } else { %>
+                                                                <span style="color: #bdc3c7;">-</span>
+                                                                <% } } else { %>
+                                                                    <span style="color: #bdc3c7;">-</span>
+                                                                    <% } %>
+                                            </td>
+                                            <td>
+                                                <% if (period.status==='OPEN' ) { %>
+                                                    <button class="btn-icon delete"
+                                                        onclick="deleteExpense('<%= exp.id %>', '<%= period.id %>')"
+                                                        title="ลบ">
+                                                        🗑️
+                                                    </button>
+                                                    <% } %>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-20">
+                            <strong>รวม LAK:</strong> <span class="money lak">
+                                <%= money.format(expenseTotal.total_lak) %>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Incidents -->
+                <% if (incidents.length> 0) { %>
+                    <div class="card mt-20"
+                        style="<%= incidents.some(i => i.severity === 'CRITICAL' && i.status === 'OPEN') ? 'border: 2px solid red;' : '' %>">
+                        <div class="flex-between">
+                            <h3
+                                style="<%= incidents.some(i => i.severity === 'CRITICAL' && i.status === 'OPEN') ? 'color: red;' : '' %>">
+                                รายการแจ้งเคส/ปัญหา (Incidents)
+                            </h3>
+                            <!-- Button moved to header -->
+                        </div>
+
+                        <div class="table-container mt-10">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ความรุนแรง</th>
+                                        <th>หัวข้อ</th>
+                                        <th>สถานะ</th>
+                                        <th>โดย</th>
+                                        <th>การแก้ไข</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% incidents.forEach(inc=> { %>
+                                        <tr
+                                            style="<%= inc.status === 'OPEN' && inc.severity === 'CRITICAL' ? 'background: #ffebee;' : '' %>">
+                                            <td>
+                                                <span
+                                                    class="badge badge-<%= inc.severity === 'CRITICAL' ? 'danger' : (inc.severity === 'HIGH' ? 'warning' : 'info') %>">
+                                                    <%= inc.severity %>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <strong>
+                                                    <%= inc.title %>
+                                                </strong><br>
+                                                <small>
+                                                    <%= inc.description %>
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <span
+                                                    class="badge badge-<%= inc.status === 'OPEN' ? 'primary' : 'success' %>">
+                                                    <%= inc.status %>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <%= inc.creator_name %>
+                                            </td>
+                                            <td>
+                                                <% if (inc.status==='RESOLVED' ) { %>
+                                                    <small class="text-success">
+                                                        <%= inc.resolution_note %> (by <%= inc.resolver_name %>)
+                                                    </small>
+                                                    <% } else { %>
+                                                        -
+                                                        <% } %>
+                                            </td>
+                                            <td>
+                                                <% if (inc.status==='OPEN' ) { %>
+                                                    <button class="btn btn-sm btn-success"
+                                                        onclick="openResolveModal('<%= inc.id %>')">ปิดเคส</button>
+                                                    <% } %>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <% } %>
+
+                        <!-- New Incident Modal -->
+                        <div id="incidentModal" class="modal-overlay">
+                            <div class="modal-box">
+                                <h3>แจ้งเคส/ปัญหาใหม่</h3>
+                                <form action="/periods/<%= period.id %>/incidents" method="POST">
+                                    <div class="form-group">
+                                        <label>หัวข้อ</label>
+                                        <input type="text" name="title" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>ความรุนแรง</label>
+                                        <select name="severity" class="form-control">
+                                            <option value="LOW">LOW (ทั่วไป)</option>
+                                            <option value="MED">MED (ปานกลาง)</option>
+                                            <option value="HIGH">HIGH (สูง)</option>
+                                            <option value="CRITICAL">CRITICAL (วิกฤต - Lock ไม่ได้)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>รายละเอียด</label>
+                                        <textarea name="description" class="form-control" rows="3"></textarea>
+                                    </div>
+                                    <div class="modal-actions">
+                                        <button type="button" class="btn btn-secondary"
+                                            onclick="hideModal('incidentModal')">ยกเลิก</button>
+                                        <button type="submit" class="btn btn-primary">บันทึก</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Resolve Modal -->
+                        <div id="resolveModal" class="modal-overlay">
+                            <div class="modal-box">
+                                <h3>บันทึกการแก้ไข (Resolution)</h3>
+                                <form id="resolveForm" method="POST">
+                                    <div class="form-group">
+                                        <label>วิธีแก้ไข (Resolution Note)</label>
+                                        <textarea name="resolution_note" class="form-control" rows="3" required
+                                            placeholder="อธิบายสิ่งที่ทำเพื่อแก้ไขปัญหานี้..."></textarea>
+                                    </div>
+                                    <div class="modal-actions">
+                                        <button type="button" class="btn btn-secondary"
+                                            onclick="hideModal('resolveModal')">ยกเลิก</button>
+                                        <button type="submit" class="btn btn-success">ปิดเคส</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <script>
+                            function openResolveModal(id) {
+                                document.getElementById('resolveForm').action = `/periods/<%= period.id %>/incidents/${id}/resolve`;
+                                showModal('resolveModal');
+                            }
+                        </script>
+                        <div class="card mt-20">
+                            <div class="card-header">
+                                <div class="flex-between">
+                                    <h3>ยอดเงินธนาคาร</h3>
+                                    <% if (period.status==='OPEN' ) { %>
+                                        <a href="/banks/<%= period.id %>" class="btn btn-primary">จัดการยอดเงิน</a>
+                                        <% } %>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-container">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>ธนาคาร</th>
+                                                <th>เลขบัญชี</th>
+                                                <th>ยอด LAK</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <% bankBalances.forEach(bank=> { %>
+                                                <tr>
+                                                    <td>
+                                                        <%= bank.bank_name %>
+                                                    </td>
+                                                    <td>
+                                                        <%= bank.bank_account || '-' %>
+                                                    </td>
+                                                    <td class="money lak">
+                                                        <%= money.format(bank.balance_lak) %>
+                                                    </td>
+                                                </tr>
+                                                <% }) %>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="mt-20">
+                                    <strong>รวม LAK:</strong> <span class="money lak">
+                                        <%= money.format(bankTotal.total_lak) %>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Add Expense Modal -->
+                        <div id="addExpenseModal" class="modal-overlay">
+                            <div class="modal-box">
+                                <h3>เพิ่มค่าใช้จ่าย</h3>
+                                <form method="POST" action="/expenses/create" enctype="multipart/form-data">
+                                    <input type="hidden" name="period_id" value="<%= period.id %>">
+
+                                    <div class="form-group">
+                                        <label>เวลาเกิดจริง</label>
+                                        <input type="datetime-local" name="occurred_at" class="form-control" required>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>ประเภท</label>
+                                        <select name="category" class="form-control" required
+                                            onchange="toggleCustomCategory(this)">
+                                            <option value="จ่ายโปร">จ่ายโปร</option>
+                                            <option value="จ่ายทั่วไป">จ่ายทั่วไป</option>
+                                            <option value="อื่นๆ">อื่นๆ</option>
+                                        </select>
+                                        <input type="text" name="custom_category" id="customCategoryInput"
+                                            class="form-control mt-2" style="display: none; margin-top: 10px;"
+                                            placeholder="ระบุประเภทอื่นๆ">
+                                    </div>
+                                    <script>
+                                        function toggleCustomCategory(select) {
+                                            const input = document.getElementById('customCategoryInput');
+                                            if (select.value === 'อื่นๆ') {
+                                                input.style.display = 'block';
+                                                input.required = true;
+                                            } else {
+                                                input.style.display = 'none';
+                                                input.required = false;
+                                            }
+                                        }
+                                    </script>
+
+                                    <div class="form-group">
+                                        <label>รายละเอียด</label>
+                                        <textarea name="description" class="form-control"></textarea>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>จำนวน LAK</label>
+                                        <input type="text" name="amount_lak" class="form-control" data-money
+                                            autocomplete="off" required>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>หลักฐานการจ่าย (Receipt)</label>
+                                        <input type="file" name="attachments" class="form-control" multiple
+                                            accept="image/*,.pdf">
+                                    </div>
+
+                                    <div class="modal-actions">
+                                        <button type="button" class="btn btn-secondary"
+                                            onclick="hideModal('addExpenseModal')">ยกเลิก</button>
+                                        <button type="submit" class="btn btn-primary"
+                                            id="saveExpenseBtn">บันทึก</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function () {
+                                // Check for Permalinks (Auto-open Modal)
+                                const urlParams = new URLSearchParams(window.location.search);
+                                if (urlParams.get('action') === 'new_incident') {
+                                    showModal('incidentModal');
+                                }
+
+                                // Auto-fill date with current local time
+                                const dateInput = document.querySelector('input[name="occurred_at"]');
+                                if (dateInput) {
+                                    const now = new Date();
+                                    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                                    dateInput.value = now.toISOString().slice(0, 16);
+                                }
+
+                                // Prevent double submit
+                                const form = document.querySelector('#addExpenseModal form');
+                                if (form) {
+                                    form.addEventListener('submit', function () {
+                                        const btn = document.getElementById('saveExpenseBtn');
+                                        if (btn) {
+                                            btn.disabled = true;
+                                            btn.innerText = 'กำลังบันทึก...';
+                                        }
+                                    });
+                                }
+                            }
+            });
+                        </script>
+
+                        <div class="text-center text-muted" style="margin-top: 50px; font-size: 0.8rem;">
+                            Debug Timestamp: <%= new Date().toLocaleTimeString('th-TH') %>
+                        </div>

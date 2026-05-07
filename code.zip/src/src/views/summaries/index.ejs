@@ -1,0 +1,52 @@
+<div class="header">
+    <h1>จัดการยอดขาย (Sales Management)</h1>
+</div>
+
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>วันที่งวด</th>
+                    <th>ปี / เดือน</th>
+                    <th class="text-right">ยอดขายรวม (LAK)</th>
+                    <th class="text-center">สถานะ</th>
+                    <th class="text-center">จัดการ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (periods && periods.length> 0) { %>
+                    <% periods.forEach(period=> { %>
+                        <tr>
+                            <td>
+                                <%= new Date(period.period_date).toLocaleDateString('th-TH', { year: 'numeric' ,
+                                    month: 'long' , day: 'numeric' }) %>
+                            </td>
+                            <td>
+                                <%= period.period_year %> / <%= period.period_month %>
+                            </td>
+                            <td class="text-right" style="font-weight: bold; color: #2c3e50;">
+                                <%= money.format(period.gross_sales) %>
+                            </td>
+                            <td class="text-center">
+                                <span
+                                    class="status-badge <%= period.status === 'OPEN' ? 'status-open' : 'status-locked' %>">
+                                    <%= period.status %>
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <a href="/summaries/<%= period.id %>" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i> บันทึกยอด
+                                </a>
+                            </td>
+                        </tr>
+                        <% }); %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">ไม่พบข้อมูล</td>
+                                </tr>
+                                <% } %>
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,83 @@
+<!-- FILE: src/views/dashboard.ejs -->
+<div class="dashboard-stats">
+    <h3>ภาพรวมระบบ</h3>
+
+    <div class="stats-grid mt-20">
+        <div class="stat-card lak">
+            <h4>งวดทั้งหมด</h4>
+            <div class="value">
+                <%= stats.totalPeriods %>
+            </div>
+        </div>
+
+        <div class="stat-card thb">
+            <h4>งวดที่เปิดอยู่</h4>
+            <div class="value">
+                <%= stats.openPeriods %>
+            </div>
+        </div>
+
+        <div class="stat-card lak">
+            <h4>งวดที่ LOCK แล้ว</h4>
+            <div class="value">
+                <%= stats.lockedPeriods %>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>งวดล่าสุด</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>วันที่งวด</th>
+                        <th>ปี/เดือน</th>
+                        <th>ยอดสรุป</th>
+                        <th>สถานะ</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% recentPeriods.forEach(period=> { %>
+                        <tr>
+                            <td>
+                                <%= new Date(period.period_date).toLocaleDateString('th-TH', { year: 'numeric' ,
+                                    month: 'long' , day: 'numeric' }) %>
+                            </td>
+                            <td>
+                                <%= period.period_year %>/<%= period.period_month %>
+                            </td>
+                            <td>
+                                <% const net_profit=(parseFloat(period.gross_sales) || 0) -
+                                    (parseFloat(period.total_prizes) || 0) - (parseFloat(period.total_expenses) || 0);
+                                    %>
+                                    <span
+                                        style="font-weight: bold; color: <%= net_profit >= 0 ? '#2ecc71' : '#e74c3c' %>">
+                                        <%= money.format(net_profit) %>
+                                    </span>
+                            </td>
+                            <td>
+                                <span
+                                    class="status-badge <%= period.status === 'LOCKED' ? 'status-locked' : 'status-open' %>">
+                                    <%= period.status %>
+                                </span>
+                            </td>
+                            <td>
+                                <a href="/periods/<%= period.id %>" class="btn btn-primary">ดูรายละเอียด</a>
+                            </td>
+                        </tr>
+                        <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-20">
+    <a href="/periods" class="btn btn-primary">จัดการงวดทั้งหมด</a>
+</div>

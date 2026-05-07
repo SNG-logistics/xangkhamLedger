@@ -14,7 +14,16 @@ const auth = {
         if (req.session && req.session.userId && req.session.role === 'SUPER_ADMIN') {
             return next();
         }
-        return res.status(403).send('Forbidden: SUPER_ADMIN only');
+        return res.status(403).send('ขออภัย: สำหรับ SUPER_ADMIN, ADMIN หรือ CEO เท่านั้น');
+    },
+
+    requireAdmin: (req, res, next) => {
+        const allowedRoles = ['SUPER_ADMIN', 'ADMIN', 'CEO'];
+        if (req.session && req.session.userId && allowedRoles.includes(req.session.role)) {
+            return next();
+        }
+        console.log(`[AUTH] Access Denied for User: ${req.session.username}, Role: ${req.session.role}, Required: ${allowedRoles.join(',')}`);
+        return res.status(403).send('ขออภัย: สำหรับ SUPER_ADMIN, ADMIN หรือ CEO เท่านั้น');
     },
 
     isAuthenticated: (req, res, next) => {

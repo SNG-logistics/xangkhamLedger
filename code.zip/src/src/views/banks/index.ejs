@@ -1,0 +1,51 @@
+<div class="page-header">
+    <h1><i class="fas fa-university"></i> บัญชีธนาคาร (Bank Accounts)</h1>
+</div>
+
+<div class="card">
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>งวดที่</th>
+                    <th>ประจำเดือน</th>
+                    <th>จำนวนบัญชี</th>
+                    <th>ยอดคงเหลือรวม (LAK)</th>
+                    <th>สถานะ</th>
+                    <th>จัดการ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (periods && periods.length> 0) { %>
+                    <% periods.forEach(period=> { %>
+                        <tr>
+                            <td>
+                                <%= period.period_date.getDate() %>
+                            </td>
+                            <td>
+                                <%= period.period_month %>/<%= period.period_year %>
+                            </td>
+                            <td>-</td> <!-- Needs count query if critical, skipping for speed -->
+                            <td>-</td>
+                            <td>
+                                <span
+                                    class="badge <%= period.status === 'OPEN' ? 'badge-success' : 'badge-secondary' %>">
+                                    <%= period.status %>
+                                </span>
+                            </td>
+                            <td>
+                                <a href="/periods/<%= period.id %>" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i> ดูยอดเงิน
+                                </a>
+                            </td>
+                        </tr>
+                        <% }); %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="6" class="text-center">ไม่พบข้อมูล</td>
+                                </tr>
+                                <% } %>
+            </tbody>
+        </table>
+    </div>
+</div>

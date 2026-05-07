@@ -1,0 +1,243 @@
+<div class="report-header">
+    <div class="report-period">รายงานงวดวันที่ <%= new Date(period.period_date).toLocaleDateString('th-TH', {
+            year: 'numeric' , month: 'long' , day: 'numeric' }) %>
+    </div>
+    <div class="report-date">ปี <%= period.period_year %> / เดือน <%= period.period_month %>
+    </div>
+</div>
+
+<% const total_prizes=(parseFloat(summary.prize_6_digit) || 0) + (parseFloat(summary.prize_5_digit) || 0) +
+    (parseFloat(summary.prize_4_digit) || 0) + (parseFloat(summary.prize_3_digit) || 0) +
+    (parseFloat(summary.prize_2_digit) || 0) + (parseFloat(summary.prize_1_digit) || 0); const
+    gross_sales=(parseFloat(summary.sales_6_digit) || 0) + (parseFloat(summary.sales_5_digit) || 0) +
+    (parseFloat(summary.sales_4_digit) || 0) + (parseFloat(summary.sales_3_digit) || 0) +
+    (parseFloat(summary.sales_2_digit) || 0) + (parseFloat(summary.sales_1_digit) || 0); const net_sales=gross_sales -
+    total_prizes; const profit_lak=net_sales - (parseFloat(expenseTotal.total_lak) || 0); const profit_thb=0 -
+    (parseFloat(expenseTotal.total_thb) || 0); %>
+
+    <!-- Screen Dashboard (Hidden on Print) -->
+    <!-- Screen Dashboard (Hidden on Print) -->
+    <div class="no-print dashboard-grid">
+        <!-- 1. Gross Sales -->
+        <div class="stat-card stat-sales">
+            <div class="card-title">ยอดขายรวม</div>
+            <div class="card-amount">
+                <%= money.format(gross_sales) %>
+            </div>
+        </div>
+
+        <!-- 2. Prizes -->
+        <div class="stat-card stat-prize">
+            <div class="card-title">ยอดถูกรางวัล</div>
+            <div class="card-amount">- <%= money.format(total_prizes) %>
+            </div>
+        </div>
+
+        <!-- 3. Net Sales -->
+        <div class="stat-card stat-net">
+            <div class="card-title">ยอดขายสุทธิ</div>
+            <div class="card-amount">
+                <%= money.format(net_sales) %>
+            </div>
+            <div class="card-subtext">(ยอดขายรวม - หักรางวัล)</div>
+        </div>
+
+        <!-- 4. Expenses -->
+        <div class="stat-card stat-expense">
+            <div class="card-title">ค่าใช้จ่าย</div>
+            <div class="card-amount">- <%= money.format(expenseTotal.total_lak || 0) %>
+            </div>
+        </div>
+
+        <!-- 5. Net Profit -->
+        <div class="stat-card stat-profit">
+            <div class="card-title">กำไรสุทธิ</div>
+            <div class="card-amount">
+                <%= money.format(profit_lak) %>
+            </div>
+            <div class="card-subtext">(ยอดขายสุทธิ - ค่าใช้จ่าย)</div>
+        </div>
+    </div>
+
+    <!-- Print Only Summary Table -->
+    <div class="print-only mb-20 section-summary">
+        <div class="print-header report-header">
+            <h1>รายงานสรุปงวดบัญชี</h1>
+            <p>วันที่ <%= new Date(period.period_date).toLocaleDateString('th-TH', { year: 'numeric' , month: 'long' ,
+                    day: 'numeric' }) %>
+            </p>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-title">📊 สรุปผลประกอบการ</div>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40%">รายการ</th>
+                        <th class="text-right">จำนวนเงิน (กีบ)</th>
+                        <th class="text-center" style="width: 15%">หมายเหตุ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1. ยอดขายรวม</td>
+                        <td class="text-right primary-text">
+                            <%= money.format(gross_sales) %>
+                        </td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>2. หัก ยอดถูกรางวัล</td>
+                        <td class="text-right danger-text">- <%= money.format(total_prizes) %>
+                        </td>
+                        <td></td>
+                    </tr>
+                    <tr class="row-highlight">
+                        <td style="font-weight: 500;">3. ยอดขายสุทธิ</td>
+                        <td class="text-right success-text" style="font-weight: 600;">
+                            <%= money.format(net_sales) %>
+                        </td>
+                        <td class="text-center text-muted">(1 - 2)</td>
+                    </tr>
+                    <tr>
+                        <td>4. หัก ค่าใช้จ่าย</td>
+                        <td class="text-right danger-text">- <%= money.format(expenseTotal.total_lak || 0) %>
+                        </td>
+                        <td></td>
+                    </tr>
+                    <tr class="total-row">
+                        <td>5. กำไรสุทธิ</td>
+                        <td class="text-right">
+                            <%= money.format(profit_lak) %>
+                        </td>
+                        <td class="text-center">(3 - 4)</td>
+                    </tr>
+                    <% if (summary.sales_thb) { %>
+                        <tr style="background-color: #fff0f6 !important; color: #c2185b; font-weight: 600;">
+                            <td>ยอดรวมสุทธิ (บาท) *ระบุเพิ่มเติม</td>
+                            <td class="text-right">
+                                <%= money.format(summary.sales_thb) %>
+                            </td>
+                            <td class="text-center">ระบุตามจริง</td>
+                        </tr>
+                        <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Details Sections (Stacked for Print) -->
+
+    <!-- Expenses Section -->
+    <div class="expense-section">
+        <div class="summary-card">
+            <div class="summary-title">💰 รายละเอียดค่าใช้จ่าย</div>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50px; text-align: center;">ลำดับ</th>
+                        <th style="width: 15%">เวลา</th>
+                        <th style="width: 15%">ประเภท</th>
+                        <th>รายละเอียด</th>
+                        <th class="text-right" style="width: 20%">จำนวนเงิน (กีบ)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (expenses && expenses.length> 0) { %>
+                        <% expenses.forEach((exp, index)=> {
+                            let rowClass = 'row-pay-other'; // Default (จ่ายอื่นๆ)
+                            if (exp.category === 'จ่ายโปร') {
+                            rowClass = 'row-pay-pro';
+                            } else if (exp.category === 'จ่ายทั่วไป') {
+                            rowClass = 'row-pay-general';
+                            }
+                            %>
+                            <tr class="<%= rowClass %>">
+                                <td style="text-align: center;">
+                                    <%= index + 1 %>
+                                </td>
+                                <td>
+                                    <%= new Date(exp.occurred_at).toLocaleString('th-TH', { hour: '2-digit' ,
+                                        minute: '2-digit' }) %>
+                                </td>
+                                <td>
+                                    <span class="badge"
+                                        style="background: none; border: 1px solid currentColor; padding: 2px 8px;">
+                                        <%= exp.category %>
+                                    </span>
+                                </td>
+                                <td>
+                                    <%= exp.description %>
+                                </td>
+                                <td class="text-right">
+                                    <%= money.format(exp.amount_lak) %>
+                                </td>
+                            </tr>
+                            <% }) %>
+                                <% } else { %>
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted">ไม่มีรายการค่าใช้จ่าย</td>
+                                    </tr>
+                                    <% } %>
+                                        <tr class="total-row">
+                                            <td colspan="4" class="text-right">รวมค่าใช้จ่ายทั้งหมด</td>
+                                            <td class="text-right">
+                                                <%= money.format(expenseTotal.total_lak || 0) %>
+                                            </td>
+                                        </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Bank Balances Section (Moved to Bottom) -->
+    <div class="bank-section">
+        <div class="summary-card" style="background-color: #fafafa;">
+            <div class="summary-title">🏦 ยอดเงินคงเหลือในบัญชีธนาคาร</div>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40%">ธนาคาร</th>
+                        <th style="width: 30%">เลขบัญชี</th>
+                        <th class="text-right">ยอดเงินคงเหลือ (กีบ)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (banks && banks.length> 0) { %>
+                        <% banks.forEach(bank=> { %>
+                            <tr>
+                                <td style="font-weight: 500;">
+                                    <%= bank.bank_name %>
+                                </td>
+                                <td class="text-muted">
+                                    <%= bank.bank_account || '-' %>
+                                </td>
+                                <td class="text-right font-weight-bold">
+                                    <%= money.format(bank.balance_lak) %>
+                                </td>
+                            </tr>
+                            <% }) %>
+                                <% } else { %>
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted">ไม่มีข้อมูลธนาคาร</td>
+                                    </tr>
+                                    <% } %>
+                                        <tr class="total-row">
+                                            <td colspan="2" class="text-right">รวมยอดเงินธนาคาร</td>
+                                            <td class="text-right">
+                                                <%= money.format(bankTotal.total_lak) %>
+                                            </td>
+                                        </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="mt-20 flex gap-10 no-print" style="justify-content: center; margin-bottom: 50px;">
+        <a href="/periods/<%= period.id %>" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> กลับ
+        </a>
+        <button class="btn btn-primary" onclick="window.print()">
+            <i class="fas fa-print"></i> พิมพ์รายงาน
+        </button>
+    </div>

@@ -1,168 +1,584 @@
-<div class="report-header">
-    <div class="report-period">รายงานงวดวันที่ <%= new Date(period.period_date).toLocaleDateString('th-TH', {
-            year: 'numeric' , month: 'long' , day: 'numeric' }) %>
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <title>รายงานงวดวันที่ <%= new Date(period.period_date).toLocaleDateString('th-TH', { day: 'numeric' , month: 'long'
+            , year: 'numeric' }) %>
+    </title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* RESET & BASE */
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            /* Light gray on screen */
+            color: #333;
+            font-size: 14px;
+        }
+
+        /* A4 PAPER SETUP */
+        @page {
+            size: A4;
+            margin: 15mm 15mm 15mm 15mm;
+        }
+
+        .paper {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 20px auto;
+            background: white;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            padding: 20mm;
+            position: relative;
+        }
+
+        /* PRINT MEDIA QUERY */
+        @media print {
+            body {
+                background: white;
+            }
+
+            .paper {
+                width: 100%;
+                margin: 0;
+                box-shadow: none;
+                padding: 0;
+                min-height: auto;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            /* Ensure background colors print */
+            tr,
+            td,
+            th {
+                break-inside: avoid;
+            }
+        }
+
+        /* HEADER SECTION */
+        .report-header {
+            /* display: flex; -> Removed flex to fix print issue */
+            /* justify-content: space-between; */
+            /* align-items: flex-start; */
+            border-bottom: 2px solid #b8860b;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            overflow: hidden;
+            /* Clearfix */
+        }
+
+        .brand-section {
+            float: left;
+            width: 60%;
+        }
+
+        .brand-section h1 {
+            margin: 0;
+            color: #1a1a1a;
+            font-weight: 700;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .brand-section .subtitle {
+            margin: 5px 0 0;
+            color: #666;
+            font-size: 16px;
+        }
+
+        .meta-section {
+            float: right;
+            width: 40%;
+            text-align: right;
+        }
+
+
+        .meta-item {
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #555;
+        }
+
+        .meta-value {
+            font-weight: 600;
+            color: #000;
+            margin-left: 10px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .status-badge.LOCKED {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-badge.OPEN {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        /* KPI CARDS (Dashboard style) */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            background: #fff;
+        }
+
+        .kpi-title {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .kpi-card.highlight {
+            background: #fff;
+            /* Removed gradient */
+            border: 2px solid #b8860b;
+            /* Gold border instead */
+        }
+
+        .kpi-card.highlight .kpi-title {
+            color: #666;
+        }
+
+        .kpi-card.highlight .kpi-value {
+            /* Color logic handled inline */
+        }
+
+        /* TABLES */
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            border-left: 4px solid #b8860b;
+            padding-left: 10px;
+            color: #333;
+            margin-top: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: #f8f9fa;
+            color: #444;
+            font-weight: 600;
+            text-align: left;
+            padding: 10px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-muted {
+            color: #888;
+        }
+
+        .font-bold {
+            font-weight: 600;
+        }
+
+        .row-total {
+            background-color: #fcfcfc;
+            font-weight: 700;
+        }
+
+        .row-grand-total {
+            background-color: transparent !important;
+            /* Removed black bg */
+            font-size: 16px;
+            font-weight: 700;
+            border-top: 2px solid #333;
+            border-bottom: 2px solid #333;
+        }
+
+        .row-stripe:nth-child(even) {
+            background-color: #fcfcfc;
+        }
+
+        /* EXPENSES COLORS */
+        .badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            border: 1px solid #ddd;
+        }
+
+        .badge-pro {
+            background: #ffebee;
+            color: #c62828;
+            border-color: #ffcdd2;
+        }
+
+        .badge-general {
+            background: #fff;
+            color: #333;
+        }
+
+        /* SIGNATURE SECTION */
+        .signatures {
+            margin-top: 60px;
+            /* Space from content */
+            display: flex;
+            justify-content: space-between;
+            page-break-inside: avoid;
+        }
+
+        .signature-box {
+            width: 45%;
+            text-align: center;
+        }
+
+        .signature-line {
+            border-bottom: 1px solid #ccc;
+            height: 40px;
+            margin-bottom: 10px;
+        }
+
+        .signature-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .footer {
+            margin-top: 40px;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+            font-size: 10px;
+            color: #999;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* BUTTONS */
+        .btn-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 50px;
+            font-family: 'Sarabun', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #1a1a1a;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #333;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #f0f0f0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- CONTROL BUTTONS -->
+    <div class="no-print btn-container">
+        <a href="/periods/<%= period.id %>" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> กลับ
+        </a>
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="fas fa-print"></i> พิมพ์รายงาน / PDF
+        </button>
     </div>
-    <div class="report-date">ปี <%= period.period_year %> / เดือน <%= period.period_month %>
-    </div>
-</div>
 
-<% const total_prizes=(parseFloat(summary.prize_6_digit) || 0) + (parseFloat(summary.prize_5_digit) || 0) +
-    (parseFloat(summary.prize_4_digit) || 0) + (parseFloat(summary.prize_3_digit) || 0) +
-    (parseFloat(summary.prize_2_digit) || 0) + (parseFloat(summary.prize_1_digit) || 0); const
-    gross_sales=(parseFloat(summary.sales_6_digit) || 0) + (parseFloat(summary.sales_5_digit) || 0) +
-    (parseFloat(summary.sales_4_digit) || 0) + (parseFloat(summary.sales_3_digit) || 0) +
-    (parseFloat(summary.sales_2_digit) || 0) + (parseFloat(summary.sales_1_digit) || 0); const net_sales=gross_sales -
-    total_prizes; const profit_lak=net_sales - (parseFloat(expenseTotal.total_lak) || 0); const profit_thb=0 -
-    (parseFloat(expenseTotal.total_thb) || 0); %>
-
-    <!-- Screen Dashboard (Hidden on Print) -->
-    <!-- Screen Dashboard (Hidden on Print) -->
-    <div class="no-print dashboard-grid">
-        <!-- 1. Gross Sales -->
-        <div class="stat-card stat-sales">
-            <div class="card-title">ยอดขายรวม</div>
-            <div class="card-amount">
-                <%= money.format(gross_sales) %>
+    <div class="paper">
+        <!-- HEADER -->
+        <header class="report-header">
+            <div class="brand-section">
+                <h1 style="margin-bottom: 5px;">XANGKHAM Ledger</h1>
+                <h3 style="margin: 0; color: #b8860b; font-size: 18px; font-weight: 600;">
+                    งวดวันที่ <%= new Date(period.period_date).toLocaleDateString('th-TH', { day: 'numeric' ,
+                        month: 'long' , year: 'numeric' }) %>
+                </h3>
+                <p class="subtitle" style="margin-top: 5px;">รายงานสรุปงวดบัญชี (Period Report)</p>
             </div>
-        </div>
-
-        <!-- 2. Prizes -->
-        <div class="stat-card stat-prize">
-            <div class="card-title">ยอดถูกรางวัล</div>
-            <div class="card-amount">- <%= money.format(total_prizes) %>
+            <div class="meta-section">
+                <div class="meta-item">
+                    วันที่พิมพ์: <span class="meta-value">
+                        <%= new Date().toLocaleDateString('th-TH', { year: 'numeric' , month: 'long' , day: 'numeric' })
+                            %>
+                    </span>
+                </div>
+                <div class="meta-item">
+                    ประจำงวด: <span class="meta-value">
+                        <%= period.period_month %> / <%= period.period_year %>
+                    </span>
+                </div>
+                <div class="meta-item">
+                    งวดวันที่: <span class="meta-value">
+                        <%= new Date(period.period_date).toLocaleDateString('th-TH', { day: 'numeric' , month: 'long' ,
+                            year: 'numeric' }) %>
+                    </span>
+                </div>
             </div>
-        </div>
+        </header>
 
-        <!-- 3. Net Sales -->
-        <div class="stat-card stat-net">
-            <div class="card-title">ยอดขายสุทธิ</div>
-            <div class="card-amount">
-                <%= money.format(net_sales) %>
+        <% /* CALCULATIONS */ const gross_sales=(parseFloat(summary.sales_6_digit) || 0) +
+            (parseFloat(summary.sales_5_digit) || 0) + (parseFloat(summary.sales_4_digit) || 0) +
+            (parseFloat(summary.sales_3_digit) || 0) + (parseFloat(summary.sales_2_digit) || 0) +
+            (parseFloat(summary.sales_1_digit) || 0); const total_prizes=(parseFloat(summary.prize_6_digit) || 0) +
+            (parseFloat(summary.prize_5_digit) || 0) + (parseFloat(summary.prize_4_digit) || 0) +
+            (parseFloat(summary.prize_3_digit) || 0) + (parseFloat(summary.prize_2_digit) || 0) +
+            (parseFloat(summary.prize_1_digit) || 0); const profit_throwing=parseFloat(summary.profit_throwing) || 0;
+            const total_expense_lak=parseFloat(expenseTotal.total_lak) || 0; /* Net Sales */ const net_sales=gross_sales
+            - total_prizes; /* Net Profit */ const net_profit=net_sales + profit_throwing - total_expense_lak; /* Cash
+            Reconciliation */ const opening_balance=parseFloat(summary.opening_balance) || 0; const
+            capital_injection=parseFloat(summary.capital_injection) || 0; const
+            capital_return=parseFloat(summary.capital_return) || 0; const
+            pre_draw=parseFloat(summary.pre_draw_cash_in_amount) || 0; const
+            post_draw=parseFloat(summary.post_draw_cash_in_amount) || 0; const expected_cash=opening_balance +
+            net_profit + capital_injection - capital_return + pre_draw + post_draw; const
+            actual_cash=parseFloat(bankTotal.total_lak) || 0; const diff=actual_cash - expected_cash; /* Colors */ const
+            profitColor=net_profit>= 0 ? '#2e7d32' : '#c62828';
+            const profitSign = net_profit >= 0 ? '+' : '';
+
+            const diffColor = diff >= 0 ? '#2e7d32' : '#c62828';
+            const diffSign = diff > 0 ? '+' : '';
+            %>
+
+            <!-- KPI CARDS -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-title">ยอดขายรวม</div>
+                    <div class="kpi-value">
+                        <%= money.format(gross_sales) %>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">ต้นทุนรางวัล</div>
+                    <div class="kpi-value" style="color: #c62828;">- <%= money.format(total_prizes) %>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">ค่าใช้จ่ายรวม</div>
+                    <div class="kpi-value" style="color: #ef6c00;">- <%= money.format(total_expense_lak) %>
+                    </div>
+                </div>
+                <div class="kpi-card highlight">
+                    <div class="kpi-title">กำไรสุทธิ (Net Profit)</div>
+                    <div class="kpi-value" style="color: <%= profitColor %>;">
+                        <%= profitSign %>
+                            <%= money.format(net_profit) %>
+                    </div>
+                </div>
             </div>
-            <div class="card-subtext">(ยอดขายรวม - หักรางวัล)</div>
-        </div>
 
-        <!-- 4. Expenses -->
-        <div class="stat-card stat-expense">
-            <div class="card-title">ค่าใช้จ่าย</div>
-            <div class="card-amount">- <%= money.format(expenseTotal.total_lak || 0) %>
-            </div>
-        </div>
-
-        <!-- 5. Net Profit -->
-        <div class="stat-card stat-profit">
-            <div class="card-title">กำไรสุทธิ</div>
-            <div class="card-amount">
-                <%= money.format(profit_lak) %>
-            </div>
-            <div class="card-subtext">(ยอดขายสุทธิ - ค่าใช้จ่าย)</div>
-        </div>
-    </div>
-
-    <!-- Print Only Summary Table -->
-    <div class="print-only mb-20 section-summary">
-        <div class="print-header report-header">
-            <h1>รายงานสรุปงวดบัญชี</h1>
-            <p>วันที่ <%= new Date(period.period_date).toLocaleDateString('th-TH', { year: 'numeric' , month: 'long' ,
-                    day: 'numeric' }) %>
-            </p>
-        </div>
-
-        <div class="summary-card">
-            <div class="summary-title">📊 สรุปผลประกอบการ</div>
-            <table class="report-table">
+            <!-- MAIN TABLE -->
+            <div class="section-title">รายละเอียดผลประกอบการ (Financial Overview)</div>
+            <table>
                 <thead>
                     <tr>
-                        <th style="width: 40%">รายการ</th>
-                        <th class="text-right">จำนวนเงิน (กีบ)</th>
-                        <th class="text-center" style="width: 15%">หมายเหตุ</th>
+                        <th style="width: 50%;">รายการ (Description)</th>
+                        <th class="text-right">จำนวนเงิน (LAK)</th>
+                        <th class="text-right" style="width: 25%;">หมายเหตุ</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>1. ยอดขายรวม</td>
-                        <td class="text-right primary-text">
+                    <tr class="row-stripe">
+                        <td>1. ยอดขายรวม (Total Sales)</td>
+                        <td class="text-right font-bold">
                             <%= money.format(gross_sales) %>
                         </td>
-                        <td></td>
+                        <td class="text-right text-muted">รวมยอดขาย 6 ตัว - 1 ตัว</td>
                     </tr>
-                    <tr>
-                        <td>2. หัก ยอดถูกรางวัล</td>
-                        <td class="text-right danger-text">- <%= money.format(total_prizes) %>
+                    <tr class="row-stripe">
+                        <td>2. หัก จ่ายรางวัล (Prizes)</td>
+                        <td class="text-right" style="color: #c62828;">- <%= money.format(total_prizes) %>
                         </td>
-                        <td></td>
+                        <td class="text-right text-muted"></td>
                     </tr>
-                    <tr class="row-highlight">
-                        <td style="font-weight: 500;">3. ยอดขายสุทธิ</td>
-                        <td class="text-right success-text" style="font-weight: 600;">
+                    <tr class="row-total">
+                        <td>ยอดขายสุทธิ (Net Sales) [1-2]</td>
+                        <td class="text-right">
                             <%= money.format(net_sales) %>
                         </td>
-                        <td class="text-center text-muted">(1 - 2)</td>
+                        <td class="text-right"></td>
                     </tr>
+                    <tr class="row-stripe">
+                        <td>3. บวก กำไรจากการโยนของ (Profit from Throwing)</td>
+                        <td class="text-right" style="color: #2e7d32;">+ <%= money.format(profit_throwing) %>
+                        </td>
+                        <td class="text-right"></td>
+                    </tr>
+                    <tr class="row-stripe">
+                        <td>4. หัก ค่าใช้จ่ายดำเนินงาน (Operating Expenses)</td>
+                        <td class="text-right" style="color: #ef6c00;">- <%= money.format(total_expense_lak) %>
+                        </td>
+                        <td class="text-right text-muted">
+                            <%= expenses ? expenses.length : 0 %> รายการ
+                        </td>
+                    </tr>
+
+                    <!-- Spacer -->
                     <tr>
-                        <td>4. หัก ค่าใช้จ่าย</td>
-                        <td class="text-right danger-text">- <%= money.format(expenseTotal.total_lak || 0) %>
-                        </td>
-                        <td></td>
+                        <td colspan="3" style="border:none; height: 10px;"></td>
                     </tr>
-                    <tr class="total-row">
-                        <td>5. กำไรสุทธิ</td>
-                        <td class="text-right">
-                            <%= money.format(profit_lak) %>
+
+                    <tr class="row-grand-total">
+                        <td style="padding: 15px;">5. กำไรสุทธิ (Net Profit)</td>
+                        <td class="text-right" style="padding: 15px; color: <%= profitColor %>;">
+                            <%= profitSign %>
+                                <%= money.format(net_profit) %>
                         </td>
-                        <td class="text-center">(3 - 4)</td>
+                        <td class="text-right" style="padding: 15px; color: #ccc;">(LAK)</td>
                     </tr>
-                    <% if (summary.sales_thb) { %>
-                        <tr style="background-color: #fff0f6 !important; color: #c2185b; font-weight: 600;">
-                            <td>ยอดรวมสุทธิ (บาท) *ระบุเพิ่มเติม</td>
-                            <td class="text-right">
-                                <%= money.format(summary.sales_thb) %>
-                            </td>
-                            <td class="text-center">ระบุตามจริง</td>
-                        </tr>
-                        <% } %>
                 </tbody>
             </table>
-        </div>
-    </div>
 
-    <!-- Details Sections (Stacked for Print) -->
 
-    <!-- Expenses Section -->
-    <div class="expense-section">
-        <div class="summary-card">
-            <div class="summary-title">💰 รายละเอียดค่าใช้จ่าย</div>
-            <table class="report-table">
+
+
+            <!-- EXPENSE SUMMARY BY CATEGORY -->
+            <div class="section-title">สรุปค่าใช้จ่ายแยกประเภท (Expense Summary by Category)</div>
+            <table>
                 <thead>
                     <tr>
-                        <th style="width: 50px; text-align: center;">ลำดับ</th>
-                        <th style="width: 15%">เวลา</th>
-                        <th style="width: 15%">ประเภท</th>
-                        <th>รายละเอียด</th>
-                        <th class="text-right" style="width: 20%">จำนวนเงิน (กีบ)</th>
+                        <th style="width: 70%;">หมวดหมู่ (Category)</th>
+                        <th class="text-right">รวม LAK (Total LAK)</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <% if (expenses && expenses.length> 0) { %>
-                        <% expenses.forEach((exp, index)=> {
-                            let rowClass = 'row-pay-other'; // Default (จ่ายอื่นๆ)
-                            if (exp.category === 'จ่ายโปร') {
-                            rowClass = 'row-pay-pro';
-                            } else if (exp.category === 'จ่ายทั่วไป') {
-                            rowClass = 'row-pay-general';
-                            }
-                            %>
-                            <tr class="<%= rowClass %>">
-                                <td style="text-align: center;">
-                                    <%= index + 1 %>
+                    <% const categories=[ { name: '1. จ่ายทั่วไป' , key: '1. จ่ายทั่วไป' }, { name: '2. รวมโปรโมชั่น' ,
+                        key: '2. รวมโปรโมชั่น' , children: [ { name: '  2.1 โปรโมชั่นใช้เครดิต' ,
+                        key: '2.1 โปรโมชั่นใช้เครดิต' }, { name: '  2.2 โปรโมชั่นเงินสด' , key: '2.2 โปรโมชั่นเงินสด' }
+                        ]}, { name: '3. กิจกรรม/การตลาด' , key: '3. กิจกรรม/การตลาด' }, { name: '4. ธนาคาร' ,
+                        key: '4. ธนาคาร' }, { name: '5. ภาษีอากร' , key: '5. ภาษีอากร' }, { name: '6. โยนของ' ,
+                        key: '6. โยนของ' } ]; categories.forEach((cat)=> {
+                        const totalForCategory = expenseSummary[cat.key] || 0;
+                        %>
+                        <tr class="row-stripe">
+                            <td><strong>
+                                    <%= cat.name %>
+                                </strong></td>
+                            <td class="text-right">
+                                <%= money.format(totalForCategory) %>
+                            </td>
+                        </tr>
+                        <% if (cat.children) { cat.children.forEach(child=> { %>
+                            <tr class="row-stripe" style="background-color: #f9f9f9;">
+                                <td style="padding-left: 40px;">
+                                    <%= child.name %>
+                                </td>
+                                <td class="text-right">
+                                    <%= money.format(expenseSummary[child.key] || 0) %>
+                                </td>
+                            </tr>
+                            <% }); } %>
+                                <% }) %>
+                                    <tr class="row-total">
+                                        <td class="text-right">รวมทั้งหมด</td>
+                                        <td class="text-right">
+                                            <%= money.format(expenseTotal.total_lak) %>
+                                        </td>
+                                    </tr>
+                </tbody>
+            </table>
+
+            <!-- EXPENSE TABLE -->
+            <% if (expenses && expenses.length> 0) { %>
+                <div class="section-title">รายการค่าใช้จ่าย (Expense Details) <span
+                        style="font-size: 12px; font-weight: 400; color: #888;"></span></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 10%;">เวลา</th>
+                            <th style="width: 20%;">ประเภท</th>
+                            <th>รายละเอียด</th>
+                            <th class="text-right" style="width: 20%;">จำนวนเงิน (LAK)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% expenses.forEach(exp=> { %>
+                            <tr class="row-stripe">
+                                <td class="text-muted">
+                                    <%= new Date(exp.occurred_at).toLocaleTimeString('th-TH', {hour:'2-digit',
+                                        minute:'2-digit'}) %>
                                 </td>
                                 <td>
-                                    <%= new Date(exp.occurred_at).toLocaleString('th-TH', { hour: '2-digit' ,
-                                        minute: '2-digit' }) %>
-                                </td>
-                                <td>
-                                    <span class="badge"
-                                        style="background: none; border: 1px solid currentColor; padding: 2px 8px;">
+                                    <span
+                                        class="badge <%= exp.category.includes('โปรโมชัน') || exp.category === '2. โปร' ? 'badge-pro' : 'badge-general' %>">
                                         <%= exp.category %>
                                     </span>
                                 </td>
@@ -174,70 +590,227 @@
                                 </td>
                             </tr>
                             <% }) %>
-                                <% } else { %>
-                                    <tr>
-                                        <td colspan="5" class="text-center text-muted">ไม่มีรายการค่าใช้จ่าย</td>
-                                    </tr>
-                                    <% } %>
-                                        <tr class="total-row">
-                                            <td colspan="4" class="text-right">รวมค่าใช้จ่ายทั้งหมด</td>
-                                            <td class="text-right">
-                                                <%= money.format(expenseTotal.total_lak || 0) %>
+                                <tr class="row-total">
+                                    <td colspan="3" class="text-right">รวมค่าใช้จ่ายทั้งหมด</td>
+                                    <td class="text-right">
+                                        <%= money.format(expenseTotal.total_lak) %>
+                                    </td>
+                                </tr>
+                    </tbody>
+                </table>
+                <% } %>
+
+                    <!-- CASH RECONCILIATION SECTION -->
+                    <div style="page-break-inside: avoid;">
+                        <div class="section-title">การกระทบยอดเงินสด (Cash Reconciliation - Updated)</div>
+                        <table style="border: 2px solid #b8860b;">
+                            <thead>
+                                <tr style="background-color: #fff8e1;">
+                                    <th style="color: #b8860b;">รายการ (Item)</th>
+                                    <th class="text-right" style="color: #b8860b;">จำนวนเงิน (Amount)</th>
+                                    <th style="width: 25%; color: #b8860b;">สถานะ (Status)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="row-stripe">
+                                    <td>1. เงินยกมา (Opening Balance)</td>
+                                    <td class="text-right">
+                                        <%= money.format(opening_balance) %>
+                                    </td>
+                                    <td><span class="badge badge-general">Start</span></td>
+                                </tr>
+                                <tr class="row-stripe">
+                                    <td>2. กำไรสุทธิ (Net Profit)</td>
+                                    <td class="text-right" style="color: <%= profitColor %>">
+                                        <%= profitSign %>
+                                            <%= money.format(net_profit) %>
+                                    </td>
+                                    <td><span class="badge badge-general">Operating</span></td>
+                                </tr>
+                                <tr class="row-stripe">
+                                    <td>3. เงินเติม (Capital Injection)</td>
+                                    <td class="text-right" style="color: #2e7d32;">+ <%= money.format(capital_injection)
+                                            %>
+                                    </td>
+                                    <td><span class="badge badge-general">Inflow</span></td>
+                                </tr>
+
+                                <% const preDrawEvidence=(typeof evidences !=='undefined' ? evidences : []).filter(e=>
+                                    e.bucket === 'PRE_DRAW');
+                                    const postDrawEvidence = (typeof evidences !== 'undefined' ? evidences :
+                                    []).filter(e => e.bucket === 'POST_DRAW');
+                                    %>
+
+                                    <% if ((summary.pre_draw_cash_in_amount && summary.pre_draw_cash_in_amount> 0) ||
+                                        preDrawEvidence.length > 0) { %>
+                                        <tr class="row-stripe" style="background-color: #fffde7; font-size: 11px;">
+                                            <td style="padding-left: 25px; color: #666;">
+                                                <i class="fas fa-level-up-alt fa-rotate-90"></i> ยอดเข้าก่อนหวยออก
+                                                (งวดถัดไป)
+                                                <% if(summary.pre_draw_note) { %> <span style="font-style: italic;">[<%=
+                                                            summary.pre_draw_note %>]</span>
+                                                    <% } %>
+                                            </td>
+                                            <td class="text-right" style="color: #2e7d32;">
+                                                + <%= money.format(summary.pre_draw_cash_in_amount || 0) %>
+                                            </td>
+                                            <td>
+                                                <% if (preDrawEvidence.length> 0) { %>
+                                                    <span class="badge" style="background: #eee; color: #333;">
+                                                        <i class="fas fa-paperclip"></i>
+                                                        <%= preDrawEvidence.length %> ใบ
+                                                    </span>
+                                                    <% preDrawEvidence.forEach((ev, idx)=> { %>
+                                                        <a href="/uploads/<%= ev.file_url %>" target="_blank"
+                                                            style="color: cornflowerblue; margin-left:2px;">[<%= idx+1
+                                                                %>]</a>
+                                                        <% }); %>
+                                                            <% } else { %>
+                                                                <span style="color:#ccc;">-</span>
+                                                                <% } %>
                                             </td>
                                         </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+                                        <% } %>
 
-    <!-- Bank Balances Section (Moved to Bottom) -->
-    <div class="bank-section">
-        <div class="summary-card" style="background-color: #fafafa;">
-            <div class="summary-title">🏦 ยอดเงินคงเหลือในบัญชีธนาคาร</div>
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th style="width: 40%">ธนาคาร</th>
-                        <th style="width: 30%">เลขบัญชี</th>
-                        <th class="text-right">ยอดเงินคงเหลือ (กีบ)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% if (banks && banks.length> 0) { %>
-                        <% banks.forEach(bank=> { %>
-                            <tr>
-                                <td style="font-weight: 500;">
-                                    <%= bank.bank_name %>
-                                </td>
-                                <td class="text-muted">
-                                    <%= bank.bank_account || '-' %>
-                                </td>
-                                <td class="text-right font-weight-bold">
-                                    <%= money.format(bank.balance_lak) %>
-                                </td>
-                            </tr>
-                            <% }) %>
-                                <% } else { %>
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted">ไม่มีข้อมูลธนาคาร</td>
-                                    </tr>
-                                    <% } %>
-                                        <tr class="total-row">
-                                            <td colspan="2" class="text-right">รวมยอดเงินธนาคาร</td>
-                                            <td class="text-right">
-                                                <%= money.format(bankTotal.total_lak) %>
+                                            <% if ((summary.post_draw_cash_in_amount &&
+                                                summary.post_draw_cash_in_amount> 0) || postDrawEvidence.length > 0) {
+                                                %>
+                                                <tr class="row-stripe"
+                                                    style="background-color: #e8f5e9; font-size: 11px;">
+                                                    <td style="padding-left: 25px; color: #666;">
+                                                        <i class="fas fa-level-up-alt fa-rotate-90"></i>
+                                                        ยอดเข้าหลังหวยออก (งวดที่แล้ว)
+                                                        <% if(summary.post_draw_note) { %> <span
+                                                                style="font-style: italic;">[<%= summary.post_draw_note
+                                                                    %>]</span>
+                                                            <% } %>
+                                                    </td>
+                                                    <td class="text-right" style="color: #2e7d32;">
+                                                        + <%= money.format(summary.post_draw_cash_in_amount || 0) %>
+                                                    </td>
+                                                    <td>
+                                                        <% if (postDrawEvidence.length> 0) { %>
+                                                            <span class="badge" style="background: #eee; color: #333;">
+                                                                <i class="fas fa-paperclip"></i>
+                                                                <%= postDrawEvidence.length %> ใบ
+                                                            </span>
+                                                            <% postDrawEvidence.forEach((ev, idx)=> { %>
+                                                                <a href="/uploads/<%= ev.file_url %>" target="_blank"
+                                                                    style="color: cornflowerblue; margin-left:2px;">[<%=
+                                                                        idx+1 %>]</a>
+                                                                <% }); %>
+                                                                    <% } else { %>
+                                                                        <span style="color:#ccc;">-</span>
+                                                                        <% } %>
+                                                    </td>
+                                                </tr>
+                                                <% } %>
+                                                    <tr class="row-stripe">
+                                                        <td>4. คืนทุน/ถอนกำไร (Return/Withdraw)</td>
+                                                        <td class="text-right" style="color: #c62828;">- <%=
+                                                                money.format(capital_return) %>
+                                                        </td>
+                                                        <td><span class="badge badge-general">Outflow</span></td>
+                                                    </tr>
+                                                    <tr class="row-total" style="background-color: #e3f2fd;">
+                                                        <td>A. ยอดเงินที่ควรมี (Expected Cash) [1+2+3-4]</td>
+                                                        <td class="text-right">
+                                                            <%= money.format(expected_cash) %>
+                                                        </td>
+                                                        <td><strong>Target</strong></td>
+                                                    </tr>
+                                                    <tr class="row-total" style="background-color: #f1f8e9;">
+                                                        <td>B. ยอดเงินที่มีจริง (Actual Cash) [Bank Summary]</td>
+                                                        <td class="text-right">
+                                                            <%= money.format(actual_cash) %>
+                                                        </td>
+                                                        <td><strong>Actual</strong></td>
+                                                    </tr>
+                                                    <tr
+                                                        style="font-size: 16px; font-weight: bold; border-top: 2px solid #333;">
+                                                        <td style="padding: 15px;">ผลต่าง (Difference) [B - A]</td>
+                                                        <td class="text-right"
+                                                            style="padding: 15px; color: <%= diffColor %>;">
+                                                            <%= diffSign %>
+                                                                <%= money.format(diff) %>
+                                                        </td>
+                                                        <td style="padding: 15px;">
+                                                            <% if (diff==0) { %>
+                                                                <span class="badge"
+                                                                    style="background: #2e7d32; color: white; padding: 5px 10px; font-size: 12px;">ครบถ้วน
+                                                                    (Balanced)</span>
+                                                                <% } else if (diff> 0) { %>
+                                                                    <span class="badge"
+                                                                        style="background: #2e7d32; color: white; padding: 5px 10px; font-size: 12px;">เงินเกิน
+                                                                        (Surplus)</span>
+                                                                    <% } else { %>
+                                                                        <span class="badge"
+                                                                            style="background: #c62828; color: white; padding: 5px 10px; font-size: 12px;">เงินขาด
+                                                                            (Shortage)</span>
+                                                                        <% } %>
+                                                        </td>
+                                                    </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- BANK SECTION -->
+                    <div style="page-break-inside: avoid;">
+                        <div class="section-title">สรุปยอดเงินธนาคาร (Bank Balances)</div>
+                        <table style="width: 100%;"> <!-- Expanded to 100% -->
+                            <thead>
+                                <tr>
+                                    <th style="width: 40%;">ธนาคาร</th>
+                                    <th>เลขบัญชี</th>
+                                    <th class="text-right">ยอดเงินคงเหลือ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (banks && banks.length> 0) { %>
+                                    <% banks.forEach(bank=> { %>
+                                        <tr class="row-stripe">
+                                            <td>
+                                                <%= bank.bank_name %>
+                                            </td>
+                                            <td class="text-muted">
+                                                <%= bank.bank_account || '-' %>
+                                            </td>
+                                            <td class="text-right font-bold">
+                                                <%= money.format(bank.balance_lak) %>
                                             </td>
                                         </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+                                        <% }) %>
+                                            <tr class="row-total">
+                                                <td colspan="2" class="text-right">รวมเงินในธนาคารทั้งสิ้น (Total Actual
+                                                    Cash)</td>
+                                                <td class="text-right">
+                                                    <%= money.format(bankTotal.total_lak) %>
+                                                </td>
+                                            </tr>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="3" class="text-center text-muted">ไม่มีข้อมูลธนาคาร
+                                                    </td>
+                                                </tr>
+                                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
 
-    <div class="mt-20 flex gap-10 no-print" style="justify-content: center; margin-bottom: 50px;">
-        <a href="/periods/<%= period.id %>" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> กลับ
-        </a>
-        <button class="btn btn-primary" onclick="window.print()">
-            <i class="fas fa-print"></i> พิมพ์รายงาน
-        </button>
+                    <!-- SIGNATURES REMOVED PER USER REQUEST -->
+
+
+                    <!-- FOOTER -->
+                    <footer class="footer">
+                        <div>
+                            System: XANGKHAM Ledger v1.1.0
+                        </div>
+                        <div>
+                            Printed: <%= new Date().toLocaleString('th-TH') %>
+                        </div>
+                    </footer>
+
     </div>
+</body>
+
+</html>

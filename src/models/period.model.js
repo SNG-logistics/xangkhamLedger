@@ -7,6 +7,7 @@ const Period = {
             SELECT p.*, u.username as locked_by_username,
             (COALESCE(s.sales_6_digit, 0) + COALESCE(s.sales_5_digit, 0) + COALESCE(s.sales_4_digit, 0) + COALESCE(s.sales_3_digit, 0) + COALESCE(s.sales_2_digit, 0) + COALESCE(s.sales_1_digit, 0)) as gross_sales,
             (COALESCE(s.prize_6_digit, 0) + COALESCE(s.prize_5_digit, 0) + COALESCE(s.prize_4_digit, 0) + COALESCE(s.prize_3_digit, 0) + COALESCE(s.prize_2_digit, 0) + COALESCE(s.prize_1_digit, 0)) as total_prizes,
+            COALESCE(s.profit_throwing, 0) as profit_throwing,
             (SELECT COALESCE(SUM(amount_lak), 0) FROM expenses e WHERE e.accounting_period_id = p.id AND e.is_deleted = FALSE) as total_expenses
             FROM periods p
             LEFT JOIN users u ON p.locked_by = u.id
@@ -36,7 +37,7 @@ const Period = {
         const [rows] = await db.query(`
             SELECT COUNT(*) as count 
             FROM periods 
-            WHERE period_date < ? AND status = 'OPEN' AND is_deleted = FALSE
+            WHERE period_date < ? AND status = 'OPEN'
         `, [date]);
         return rows[0].count > 0;
     },
@@ -46,6 +47,7 @@ const Period = {
             SELECT p.*,
             (COALESCE(s.sales_6_digit, 0) + COALESCE(s.sales_5_digit, 0) + COALESCE(s.sales_4_digit, 0) + COALESCE(s.sales_3_digit, 0) + COALESCE(s.sales_2_digit, 0) + COALESCE(s.sales_1_digit, 0)) as gross_sales,
             (COALESCE(s.prize_6_digit, 0) + COALESCE(s.prize_5_digit, 0) + COALESCE(s.prize_4_digit, 0) + COALESCE(s.prize_3_digit, 0) + COALESCE(s.prize_2_digit, 0) + COALESCE(s.prize_1_digit, 0)) as total_prizes,
+            COALESCE(s.profit_throwing, 0) as profit_throwing,
             (SELECT COALESCE(SUM(amount_lak), 0) FROM expenses e WHERE e.accounting_period_id = p.id AND e.is_deleted = FALSE) as total_expenses
             FROM periods p
             LEFT JOIN sales_summaries s ON s.period_id = p.id
@@ -53,6 +55,20 @@ const Period = {
             ORDER BY p.period_date ASC
         `, [year, month]);
         return rows;
+    },
+
+    getPreviousPeriod: async (currentPeriodId) => {
+        const [current] = await db.query('SELECT period_date FROM periods WHERE id = ?', [currentPeriodId]);
+        if (!current.length) return null;
+
+        const [rows] = await db.query(`
+            SELECT * FROM periods 
+            WHERE period_date < ? 
+            ORDER BY period_date DESC 
+            LIMIT 1
+        `, [current[0].period_date]);
+
+        return rows[0] || null;
     },
 
     create: async (periodDate, year, month) => {

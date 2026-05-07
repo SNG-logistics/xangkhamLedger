@@ -1,21 +1,23 @@
 // FILE: src/controllers/bank.controller.js
+
 const Bank = require('../models/bank.model');
 const audit = require('../middleware/audit');
+const db = require('../config/db');
+const Period = require('../models/period.model');
 
 const bankController = {
     index: async (req, res) => {
         try {
-            // Find all periods to let user filter, or show latest
-            const periods = await require('../models/period.model').findAll();
-            // Optionally, we could list ALL bank balances, but typically they are period-specific.
-            // For now, let's redirect to dashboard or show a period selector.
-            // A better approach for "Bank Accounts" sidebar link is to show valid balances across periods.
-            // Let's reuse the summary index style: List periods and showing bank status?
-            // OR finding all bank balances:
-            // const banks = await Bank.findAll(); (Need to implement findAll in model)
+            // Retrieve periods with calculated total bank balance
+            const [periods] = await db.query(`
+                SELECT p.*,
+    (SELECT COALESCE(SUM(balance_lak), 0) FROM bank_balances bb WHERE bb.period_id = p.id) as total_balance_lak,
+        (SELECT COUNT(*) FROM bank_balances bb WHERE bb.period_id = p.id) as account_count
+                FROM periods p
+                ORDER BY p.period_date DESC
+    `);
 
-            // Simpler: Render a page listing periods to manage bank accounts for
-            res.render('banks/index', { periods });
+            res.render('banks/index', { periods, money: require('../utils/money') });
         } catch (error) {
             console.error(error);
             res.status(500).send('Error loading bank index');
@@ -27,21 +29,44 @@ const bankController = {
             const periodId = req.params.periodId;
             const banks = await Bank.findByPeriod(periodId);
             const masterAccounts = await require('../models/bank_account.model').findActive();
-            res.render('banks/form', { periodId, banks, masterAccounts });
+
+            // ดึงยอดล่าสุดของแต่ละบัญชีย้อนหลังถึงงวดปัจจุบัน เพื่อใช้เป็นค่าเริ่มต้น
+            let lastBalances = {};
+            const period = await Period.findById(periodId);
+            if (period) {
+                const [rows] = await db.query(
+                    `
+                    SELECT bank_account_id, balance_lak
+FROM(
+    SELECT 
+                            bb.bank_account_id,
+    bb.balance_lak,
+    ROW_NUMBER() OVER(PARTITION BY bb.bank_account_id ORDER BY p.period_date DESC) AS rn
+                        FROM bank_balances bb
+                        JOIN periods p ON p.id = bb.period_id
+                        WHERE p.period_date <= ?
+                    ) t
+                    WHERE rn = 1
+    `,
+                    [period.period_date]
+                );
+                lastBalances = Object.fromEntries(rows.map(r => [r.bank_account_id, r.balance_lak]));
+            }
+
+            res.render('banks/form', { periodId, banks, masterAccounts, lastBalances });
         } catch (error) {
             console.error(error);
-            res.status(500).send(`Error loading bank form: ${error.message}<br><pre>${error.stack}</pre>`);
+            res.status(500).send(`Error loading bank form: ${error.message} <br><pre>${error.stack}</pre>`);
         }
     },
 
     create: async (req, res) => {
         try {
-            const { period_id, bank_name, bank_account, balance_lak, notes } = req.body;
+            const { period_id, bank_account_id, balance_lak, notes } = req.body;
 
             const bankId = await Bank.create(
                 period_id,
-                bank_name,
-                bank_account,
+                bank_account_id,
                 balance_lak || 0,
                 notes,
                 req.session.userId
@@ -53,7 +78,7 @@ const bankController = {
                 'bank_balances',
                 bankId,
                 null,
-                { bank_name, balance_lak },
+                { bank_account_id, balance_lak },
                 null,
                 req.ip,
                 req.get('User-Agent')
@@ -68,9 +93,9 @@ const bankController = {
 
     update: async (req, res) => {
         try {
-            const { id, bank_account, balance_lak, notes, period_id } = req.body;
+            const { id, bank_account_id, balance_lak, notes, period_id } = req.body;
 
-            await Bank.update(id, bank_account, balance_lak || 0, notes);
+            await Bank.update(id, bank_account_id, balance_lak || 0, notes, req.session.userId);
 
             await audit.log(
                 req.session.userId,
@@ -78,7 +103,7 @@ const bankController = {
                 'bank_balances',
                 id,
                 null,
-                { balance_lak },
+                { bank_account_id, balance_lak },
                 null,
                 req.ip,
                 req.get('User-Agent')
@@ -95,10 +120,6 @@ const bankController = {
         try {
             const { id } = req.params;
             const { reason } = req.body; // Expect JSON body with reason
-
-            // Optional: You might want to enforce reason for balance deletion too, 
-            // though user request was for Bank Account (Master). 
-            // Since we added the modal here too, let's log it.
 
             await Bank.delete(id);
 

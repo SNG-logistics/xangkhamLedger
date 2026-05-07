@@ -13,6 +13,12 @@ const auditController = {
             console.error(error);
             res.status(500).send('Error loading audit logs');
         }
+    },
+
+    check: (req, res) => {
+        res.render('audit/check', {
+            title: 'Audit System - ตรวจสอบความถูกต้องสลาก'
+        });
     }
 };
 

@@ -1,0 +1,199 @@
+<!-- Quick Expense Modal -->
+<div id="quickExpenseModal" class="modal">
+    <div class="modal-content animate__animated animate__fadeInDown">
+        <span class="close-modal">&times;</span>
+        <div class="modal-header">
+            <h2><i class="fas fa-bolt text-warning"></i> เพิ่มค่าใช้จ่ายด่วน (Quick Add)</h2>
+        </div>
+        <div class="modal-body">
+            <form id="quickExpenseForm" action="/expenses/create" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="period_id" value="<%= period.id %>">
+                <div class="form-group">
+                    <label>วันที่-เวลา</label>
+                    <input type="datetime-local" name="occurred_at" id="quick_occurred_at" class="form-control"
+                        required>
+                </div>
+
+                <div class="form-group">
+                    <label>หมวดหมู่</label>
+                    <select name="category" class="form-control" required>
+                        <option value="1. จ่ายทั่วไป">1. จ่ายทั่วไป</option>
+                        <option value="2.1 โปรโมชั่นใช้เครดิต">2.1 โปรโมชั่นใช้เครดิต</option>
+                        <option value="2.2 โปรโมชั่นเงินสด">2.2 โปรโมชั่นเงินสด</option>
+                        <option value="3. กิจกรรม/การตลาด">3. กิจกรรม/การตลาด</option>
+                        <option value="4. ธนาคาร">4. ธนาคาร</option>
+                        <option value="5. ภาษีอากร">5. ภาษีอากร</option>
+                        <option value="6. โยนของ">6. โยนของ</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>รายละเอียด</label>
+                    <textarea name="description" class="form-control" rows="2"
+                        placeholder="รายละเอียดค่าใช้จ่าย..."></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label>จำนวนเงิน (LAK)</label>
+                            <input type="number" step="0.01" name="amount_lak" class="form-control" placeholder="0.00"
+                                required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drag & Drop Zone -->
+                <div class="form-group">
+                    <label>แนบสลิป/หลักฐาน</label>
+                    <div id="drop-zone" class="drop-zone">
+                        <i class="fas fa-cloud-upload-alt fa-2x"></i>
+                        <p>ลากไฟล์มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
+                        <input type="file" name="attachments" id="file-input" class="file-input"
+                            accept="image/*,application/pdf" hidden>
+                        <div id="file-preview" class="file-preview"></div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-block">บันทึกข้อมูล</button>
+                </div>
+            </form>
+            <script>
+                // Auto-set current time
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                document.getElementById('quick_occurred_at').value = now.toISOString().slice(0, 16);
+            </script>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+        background-color: #fefefe;
+        margin: 10% auto;
+        padding: 24px;
+        border: 1px solid #888;
+        width: 90%;
+        max-width: 500px;
+        border-radius: 16px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .close-modal {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .close-modal:hover,
+    .close-modal:focus {
+        color: #000;
+        text-decoration: none;
+    }
+
+    /* Drag & Drop Zone */
+    .drop-zone {
+        border: 2px dashed #ccc;
+        border-radius: 12px;
+        padding: 30px;
+        text-align: center;
+        color: #888;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #fafafa;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+        border-color: #4f46e5;
+        background-color: #eef2ff;
+        color: #4f46e5;
+    }
+
+    .file-preview {
+        margin-top: 15px;
+        font-size: 14px;
+        color: #333;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const modal = document.getElementById("quickExpenseModal");
+        const closeBtn = document.getElementsByClassName("close-modal")[0];
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const filePreview = document.getElementById('file-preview');
+
+        // Close logic
+        if (closeBtn) {
+            closeBtn.onclick = function () {
+                modal.style.display = "none";
+            }
+        }
+
+        window.onclick = function (event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        // Drag & Drop logic
+        if (dropZone) {
+            dropZone.addEventListener('click', () => fileInput.click());
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    updateFilePreview(fileInput.files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length) {
+                    updateFilePreview(fileInput.files[0]);
+                }
+            });
+        }
+
+        function updateFilePreview(file) {
+            filePreview.innerHTML = `
+            <div class="mt-2">
+                <i class="fas fa-check-circle text-success"></i> Selected: <strong>${file.name}</strong>
+                <br><span class="text-muted text-sm">(${(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+            </div>
+        `;
+        }
+    });
+</script>

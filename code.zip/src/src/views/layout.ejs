@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>
+    <%= title || 'Changkhum Ledger' %>
+  </title>
+  <!-- Add FontAwesome for Sidebar Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/print.css" media="print">
+</head>
+
+<body>
+  <% if (locals.isAuth) { %>
+    <div class="app-container">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <h1>XL</h1>
+          <div class="logo-text">
+            <h2>XANGKHAM</h2>
+            <p>Ledger System</p>
+          </div>
+        </div>
+        <nav class="sidebar-nav">
+          <a href="/dashboard" class="<%= path === '/dashboard' ? 'active' : '' %>" title="หน้าแรก">
+            <i class="fas fa-home"></i>
+            <span>หน้าแรก</span>
+          </a>
+          <a href="/periods" class="<%= path.includes('/periods') ? 'active' : '' %>" title="จัดการงวด">
+            <i class="fas fa-calendar-alt"></i>
+            <span>จัดการงวด</span>
+          </a>
+          <a href="/summaries" class="<%= path.includes('/summaries') ? 'active' : '' %>" title="ยอดขาย">
+            <i class="fas fa-chart-line"></i>
+            <span>ยอดขาย</span>
+          </a>
+          <a href="/expenses" class="<%= path.includes('/expenses') ? 'active' : '' %>" title="ค่าใช้จ่าย">
+            <i class="fas fa-receipt"></i>
+            <span>ค่าใช้จ่าย</span>
+          </a>
+          <a href="/banks" class="<%= path.includes('/banks') ? 'active' : '' %>" title="บัญชีธนาคาร">
+            <i class="fas fa-university"></i>
+            <span>บัญชีธนาคาร</span>
+          </a>
+          <a href="/reports/monthly" class="<%= path.includes('/reports') ? 'active' : '' %>" title="รายงาน">
+            <i class="fas fa-file-invoice"></i>
+            <span>รายงาน</span>
+          </a>
+          <a href="/audit" class="<%= path.includes('/audit') ? 'active' : '' %>" title="Audit Log">
+            <i class="fas fa-history"></i>
+            <span>Audit Log</span>
+          </a>
+
+          <div class="nav-divider"></div>
+
+          <a href="/logout" title="ออกจากระบบ">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>ออกจากระบบ</span>
+          </a>
+        </nav>
+      </aside>
+
+      <div class="main-content" id="main-content">
+        <header class="header">
+          <div class="header-left">
+            <button id="sidebar-toggle" class="sidebar-toggle">
+              <i class="fas fa-bars"></i>
+            </button>
+            <h2>
+              <%= title || 'Dashboard' %>
+            </h2>
+          </div>
+          <div class="header-actions">
+            <div class="user-info">
+              <div class="user-avatar">
+                <%= user.fullName.charAt(0).toUpperCase() %>
+              </div>
+              <div class="user-details">
+                <strong>
+                  <%= user.fullName %>
+                </strong>
+                <span>
+                  <%= user.role %>
+                </span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main class="content">
+          <%- body %>
+        </main>
+      </div>
+    </div>
+    <% } else { %>
+      <%- body %>
+        <% } %>
+
+          <script src="/js/ui.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,71 @@
+<!-- FILE: src/views/audit/logs.ejs -->
+<div class="card">
+    <div class="card-header">
+        <h3>🔍 Audit Log</h3>
+    </div>
+    <div class="card-body">
+        <h4>ประวัติ Lock/Unlock</h4>
+        <div class="mt-20">
+            <% lockEvents.forEach(event=> { %>
+                <div class="log-entry <%= event.action === 'LOCK' ? 'critical' : '' %>">
+                    <div class="log-entry-header">
+                        <span class="log-entry-action">
+                            <%= event.action==='LOCK' ? '🔒 LOCK' : '🔓 UNLOCK' %> - งวด <%= event.period_date %>
+                        </span>
+                        <span class="log-entry-time">
+                            <%= event.created_at %>
+                        </span>
+                    </div>
+                    <div class="log-entry-details">
+                        <strong>ผู้ดำเนินการ:</strong>
+                        <%= event.username %> |
+                            <strong>เหตุผล:</strong>
+                            <%= event.reason %>
+                    </div>
+                </div>
+                <% }) %>
+        </div>
+
+        <hr class="mt-20 mb-20">
+
+        <h4>ประวัติการใช้งานทั้งหมด</h4>
+        <div class="table-container mt-20">
+            <table>
+                <thead>
+                    <tr>
+                        <th>เวลา</th>
+                        <th>ผู้ใช้</th>
+                        <th>Action</th>
+                        <th>Table</th>
+                        <th>Record ID</th>
+                        <th>เหตุผล</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% logs.forEach(log=> { %>
+                        <tr>
+                            <td>
+                                <%= log.created_at %>
+                            </td>
+                            <td>
+                                <%= log.username || '-' %>
+                            </td>
+                            <td>
+                                <%= log.action %>
+                            </td>
+                            <td>
+                                <%= log.table_name || '-' %>
+                            </td>
+                            <td>
+                                <%= log.record_id || '-' %>
+                            </td>
+                            <td>
+                                <%= log.reason || '-' %>
+                            </td>
+                        </tr>
+                        <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

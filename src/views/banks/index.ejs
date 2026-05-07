@@ -25,8 +25,12 @@
                             <td>
                                 <%= period.period_month %>/<%= period.period_year %>
                             </td>
-                            <td>-</td> <!-- Needs count query if critical, skipping for speed -->
-                            <td>-</td>
+                            <td>
+                                <%= period.account_count %>
+                            </td>
+                            <td class="money lak">
+                                <%= money.format(period.total_balance_lak) %>
+                            </td>
                             <td>
                                 <span
                                     class="badge <%= period.status === 'OPEN' ? 'badge-success' : 'badge-secondary' %>">

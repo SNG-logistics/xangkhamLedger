@@ -1,0 +1,222 @@
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-users-cog me-2"></i>จัดการผู้ใช้งาน (User Management)</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
+            <i class="fas fa-plus me-1"></i> เพิ่มผู้ใช้งาน
+        </button>
+    </div>
+
+    <!-- Users Table -->
+    <div class="card shadow-sm border-0 glass-panel">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">ID</th>
+                            <th>Username</th>
+                            <th>ชื่อ-นามสกุล</th>
+                            <th>ตำแหน่ง (Role)</th>
+                            <th>สถานะ</th>
+                            <th>วันที่สร้าง</th>
+                            <th class="text-end pe-4">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% users.forEach(u=> { %>
+                            <tr>
+                                <td class="ps-4">
+                                    <%= u.id %>
+                                </td>
+                                <td><span class="fw-bold text-primary">
+                                        <%= u.username %>
+                                    </span></td>
+                                <td>
+                                    <%= u.full_name %>
+                                </td>
+                                <td>
+                                    <% let badgeClass='bg-secondary' ; if (u.role==='SUPER_ADMIN' )
+                                        badgeClass='bg-danger' ; else if (u.role==='CEO' ) badgeClass='bg-dark' ; else
+                                        if (u.role==='ADMIN' ) badgeClass='bg-warning text-dark' ; else if
+                                        (u.role==='STAFF' ) badgeClass='bg-info text-dark' ; else if (u.role==='VIEWER'
+                                        ) badgeClass='bg-light text-dark border' ; %>
+                                        <span class="badge rounded-pill <%= badgeClass %>">
+                                            <%= u.role %>
+                                        </span>
+                                </td>
+                                <td>
+                                    <% if(u.is_active) { %>
+                                        <span class="badge bg-success rounded-pill"><i
+                                                class="fas fa-check-circle me-1"></i>ใช้งาน</span>
+                                        <% } else { %>
+                                            <span class="badge bg-danger rounded-pill"><i
+                                                    class="fas fa-ban me-1"></i>ระงับ</span>
+                                            <% } %>
+                                </td>
+                                <td class="text-muted small">
+                                    <%= new Date(u.created_at).toLocaleDateString('th-TH') %>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <button class="btn btn-sm btn-outline-warning me-1"
+                                        onclick="editUser('<%= u.id %>', '<%= u.username %>', '<%= u.full_name %>', '<%= u.role %>', <%= u.is_active %>)">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info me-1"
+                                        onclick="changePassword('<%= u.id %>', '<%= u.username %>')">
+                                        <i class="fas fa-key"></i>
+                                    </button>
+                                    <% if(u.id !==currentUserId) { %>
+                                        <button class="btn btn-sm btn-outline-danger"
+                                            onclick="deleteUser('<%= u.id %>')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        <% } %>
+                                </td>
+                            </tr>
+                            <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create User Modal -->
+<div class="modal fade" id="createUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content glass-panel">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>เพิ่มผู้ใช้งานใหม่</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/users/create" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" name="username" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ชื่อ-นามสกุล</label>
+                        <input type="text" name="full_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ตำแหน่ง (Role)</label>
+                        <select name="role" class="form-select">
+                            <option value="STAFF" selected>STAFF (พนักงานทั่วไป)</option>
+                            <option value="ADMIN">ADMIN (ผู้ดูแลระบบ)</option>
+                            <option value="CEO">CEO (ผู้บริหาร)</option>
+                            <option value="VIEWER">VIEWER (ดูได้อย่างเดียว)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content glass-panel">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="fas fa-user-edit me-2"></i>แก้ไขผู้ใช้งาน</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editUserForm" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" id="editUsername" class="form-control" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ชื่อ-นามสกุล</label>
+                        <input type="text" name="full_name" id="editFullName" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ตำแหน่ง (Role)</label>
+                        <select name="role" id="editRole" class="form-select">
+                            <option value="STAFF">STAFF</option>
+                            <option value="ADMIN">ADMIN</option>
+                            <option value="CEO">CEO</option>
+                            <option value="VIEWER">VIEWER</option>
+                        </select>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="is_active" id="editIsActive">
+                        <label class="form-check-label" for="editIsActive">เปิดใช้งาน (Active)</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-warning">บันทึกการแก้ไข</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal fade" id="changePassModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content glass-panel">
+            <div class="modal-header border-0">
+                <h5 class="modal-title"><i class="fas fa-key me-2"></i>เปลี่ยนรหัสผ่าน</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="changePassForm" method="POST">
+                <div class="modal-body">
+                    <p>ผู้ใช้: <strong id="passUsername" class="text-primary"></strong></p>
+                    <div class="mb-3">
+                        <label class="form-label">รหัสผ่านใหม่</label>
+                        <input type="password" name="new_password" class="form-control" required minlength="4">
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-info">เปลี่ยนรหัสผ่าน</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function editUser(id, username, fullName, role, isActive) {
+        document.getElementById('editUserForm').action = `/users/${id}/update`;
+        document.getElementById('editUsername').value = username;
+        document.getElementById('editFullName').value = fullName;
+        document.getElementById('editRole').value = role;
+        document.getElementById('editIsActive').checked = isActive;
+
+        new bootstrap.Modal(document.getElementById('editUserModal')).show();
+    }
+
+    function changePassword(id, username) {
+        document.getElementById('changePassForm').action = `/users/${id}/change-password`;
+        document.getElementById('passUsername').innerText = username;
+
+        new bootstrap.Modal(document.getElementById('changePassModal')).show();
+    }
+
+    function deleteUser(id) {
+        if (confirm('ยืนยันที่จะลบผู้ใช้งานนี้หรือไม่? ข้อมูลจะไม่สามารถกู้คืนได้')) {
+            fetch(`/users/${id}`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('เกิดข้อผิดพลาด: ' + data.error);
+                    }
+                });
+        }
+    }
+</script>

@@ -1,0 +1,286 @@
+<div class="report-header">
+    <div class="report-period">รายงานสรุปรายเดือน</div>
+    <% if (year && month) { %>
+        <div class="report-date">ปี <%= year %> / เดือน <%= month %>
+        </div>
+        <% } %>
+</div>
+
+<!-- Filter Form (Hidden on Print) -->
+<div class="card no-print">
+    <div class="card-header">
+        <h3>เลือกเดือน/ปี</h3>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="/reports/monthly" class="flex gap-20">
+            <div class="form-group">
+                <label>ปี</label>
+                <input type="number" name="year" class="form-control" value="<%= year || 2025 %>" required>
+            </div>
+            <div class="form-group">
+                <label>เดือน</label>
+                <select name="month" class="form-control" required>
+                    <% for(let m=1; m <=12; m++) { %>
+                        <option value="<%= m %>" <%=month==m ? 'selected' : '' %>><%= m %>
+                        </option>
+                        <% } %>
+                </select>
+            </div>
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+                <button type="submit" class="btn btn-primary">ดูรายงาน</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<% if (year && month && periods.length> 0) { %>
+
+    <!-- Print View (Hidden on Screen via CSS) -->
+    <div class="print-only section-summary">
+        <div class="print-header report-header">
+            <h1>รายงานสรุปรายเดือน</h1>
+            <p>เดือน <%= month %> / ปี <%= year %>
+            </p>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-title">📊 สรุปผลประกอบการ</div>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40%">รายการ</th>
+                        <th class="text-right">จำนวนเงิน (กีบ)</th>
+                        <th class="text-center" style="width: 15%">หมายเหตุ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1. ยอดขายรวม</td>
+                        <td class="text-right primary-text">
+                            <%= money.format(totals.salesLak) %>
+                        </td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>2. หัก ยอดถูกรางวัล</td>
+                        <td class="text-right danger-text">- <%= money.format(totals.prizesLak) %>
+                        </td>
+                        <td></td>
+                    </tr>
+                    <tr class="row-highlight">
+                        <td style="font-weight: 500;">3. ยอดขายสุทธิ</td>
+                        <td class="text-right success-text" style="font-weight: 600;">
+                            <%= money.format(totals.salesLak - totals.prizesLak) %>
+                        </td>
+                        <td class="text-center text-muted">(1 - 2)</td>
+                    </tr>
+                    <tr>
+                        <td>4. หัก ค่าใช้จ่าย</td>
+                        <td class="text-right danger-text">- <%= money.format(totals.expensesLak) %>
+                        </td>
+                        <td></td>
+                    </tr>
+                    <tr class="total-row">
+                        <td>5. กำไรสุทธิ</td>
+                        <td class="text-right">
+                            <%= money.format(totals.netLak) %>
+                        </td>
+                        <td class="text-center">(3 - 4)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="summary-card" style="margin-top: 20px;">
+            <div class="summary-title">📅 รายละเอียดรายงวด</div>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th style="text-align: center;">วันที่</th>
+                        <th class="text-right">ยอดขาย</th>
+                        <th class="text-right">ถูกรางวัล</th>
+                        <th class="text-right">ค่าใช้จ่าย</th>
+                        <th class="text-right">ยอดสรุป (Net)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% periods.forEach(period=> {
+                        const net_profit = (parseFloat(period.gross_sales) || 0) - (parseFloat(period.total_prizes) ||
+                        0) - (parseFloat(period.total_expenses) || 0);
+                        %>
+                        <tr>
+                            <td style="text-align: center;">
+                                <%= new Date(period.period_date).toLocaleDateString('th-TH', { year: 'numeric' ,
+                                    month: 'numeric' , day: 'numeric' }) %>
+                            </td>
+                            <td class="text-right">
+                                <%= money.format(period.gross_sales) %>
+                            </td>
+                            <td class="text-right danger-text">
+                                -<%= money.format(period.total_prizes) %>
+                            </td>
+                            <td class="text-right text-muted">
+                                -<%= money.format(period.total_expenses) %>
+                            </td>
+                            <td class="text-right <%= net_profit >= 0 ? 'success-text' : 'danger-text' %>"
+                                style="font-weight: bold;">
+                                <%= money.format(net_profit) %>
+                            </td>
+                        </tr>
+                        <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Screen View (Hidden on Print) -->
+    <div class="no-print">
+
+        <!-- Summary Stats Grid -->
+        <div class="card mt-20">
+            <div class="card-header">
+                <h3>สรุปภาพรวม (Overview)</h3>
+            </div>
+            <div class="card-body">
+                <div class="stats-grid">
+                    <div class="stat-card lak">
+                        <h4>รวมยอดขาย (LAK)</h4>
+                        <div class="value text-primary">
+                            <%= money.format(totals.salesLak) %>
+                        </div>
+                    </div>
+                    <div class="stat-card lak">
+                        <h4>รวมยอดถูกรางวัล (LAK)</h4>
+                        <div class="value text-danger">- <%= money.format(totals.prizesLak) %>
+                        </div>
+                    </div>
+                    <div class="stat-card lak">
+                        <h4>รวมค่าใช้จ่าย (LAK)</h4>
+                        <div class="value text-warning">
+                            - <%= money.format(totals.expensesLak) %>
+                        </div>
+                    </div>
+                    <div class="stat-card lak">
+                        <h4>กำไรสุทธิ (LAK)</h4>
+                        <div class="value text-success">
+                            <%= money.format(totals.netLak) %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Summary Card -->
+        <div class="card mt-20">
+            <div class="card-header">
+                <h3>📊 สรุปผลประกอบการ (Breakdown)</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 40%">รายการ</th>
+                                <th class="text-right">จำนวนเงิน (กีบ)</th>
+                                <th class="text-center" style="width: 15%">หมายเหตุ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1. ยอดขายรวม</td>
+                                <td class="text-right text-primary" style="font-weight: bold;">
+                                    <%= money.format(totals.salesLak) %>
+                                </td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>2. หัก ยอดถูกรางวัล</td>
+                                <td class="text-right text-danger">- <%= money.format(totals.prizesLak) %>
+                                </td>
+                                <td></td>
+                            </tr>
+                            <tr style="background-color: #f8f9fa;">
+                                <td style="font-weight: 500;">3. ยอดขายสุทธิ</td>
+                                <td class="text-right text-success" style="font-weight: 600;">
+                                    <%= money.format(totals.salesLak - totals.prizesLak) %>
+                                </td>
+                                <td class="text-center text-muted">(1 - 2)</td>
+                            </tr>
+                            <tr>
+                                <td>4. หัก ค่าใช้จ่าย</td>
+                                <td class="text-right text-danger">- <%= money.format(totals.expensesLak) %>
+                                </td>
+                                <td></td>
+                            </tr>
+                            <tr style="background-color: #eafaf1; border-top: 2px solid #2ecc71;">
+                                <td style="font-weight: bold; color: #27ae60;">5. กำไรสุทธิ</td>
+                                <td class="text-right" style="font-weight: bold; font-size: 1.2rem; color: #27ae60;">
+                                    <%= money.format(totals.netLak) %>
+                                </td>
+                                <td class="text-center text-muted">(3 - 4)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Period Details Card -->
+        <div class="card mt-20">
+            <div class="card-header">
+                <h3>📅 รายละเอียดรายงวด</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="text-align: center;">วันที่</th>
+                                <th class="text-right">ยอดขาย</th>
+                                <th class="text-right">ถูกรางวัล</th>
+                                <th class="text-right">ค่าใช้จ่าย</th>
+                                <th class="text-right">ยอดสรุป (Net)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% periods.forEach(period=> {
+                                const net_profit = (parseFloat(period.gross_sales) || 0) -
+                                (parseFloat(period.total_prizes) ||
+                                0) - (parseFloat(period.total_expenses) || 0);
+                                %>
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <%= new Date(period.period_date).toLocaleDateString('th-TH', { year: 'numeric' ,
+                                            month: 'numeric' , day: 'numeric' }) %>
+                                    </td>
+                                    <td class="text-right">
+                                        <%= money.format(period.gross_sales) %>
+                                    </td>
+                                    <td class="text-right text-danger">
+                                        -<%= money.format(period.total_prizes) %>
+                                    </td>
+                                    <td class="text-right text-muted">
+                                        -<%= money.format(period.total_expenses) %>
+                                    </td>
+                                    <td class="text-right <%= net_profit >= 0 ? 'text-success' : 'text-danger' %>"
+                                        style="font-weight: bold;">
+                                        <%= money.format(net_profit) %>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-20 flex gap-10" style="justify-content: center; margin-bottom: 50px;">
+            <button class="btn btn-primary" onclick="window.print()">
+                <i class="fas fa-print"></i> พิมพ์รายงาน
+            </button>
+        </div>
+    </div>
+
+    <% } else if (year && month) { %>
+        <div class="alert alert-warning mt-20">ไม่พบข้อมูลในเดือน/ปีที่เลือก</div>
+        <% } %>

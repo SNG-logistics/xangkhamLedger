@@ -9,3 +9,6 @@ yarn-error.log
 .vscode
 *.sqlite
 *.sqlite-journal
+venv/
+reconciliation_app/venv/
+__pycache__/

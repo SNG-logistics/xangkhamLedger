@@ -7,8 +7,13 @@
   <title>
     <%= title || 'Changkhum Ledger' %>
   </title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Add FontAwesome for Sidebar Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/css/theme.css">
   <link rel="stylesheet" href="/css/layout.css">
   <link rel="stylesheet" href="/css/components.css">
   <link rel="stylesheet" href="/css/app.css">
@@ -51,17 +56,29 @@
             <i class="fas fa-file-invoice"></i>
             <span>รายงาน</span>
           </a>
-          <a href="/audit" class="<%= path.includes('/audit') ? 'active' : '' %>" title="Audit Log">
-            <i class="fas fa-history"></i>
-            <span>Audit Log</span>
-          </a>
+          <% if (['SUPER_ADMIN', 'ADMIN' , 'CEO' ].includes(user.role)) { %>
+            <a href="/audit" class="<%= path.includes('/audit') && !path.includes('/audit/check') ? 'active' : '' %>" title="Audit Log">
+              <i class="fas fa-history"></i>
+              <span>Audit Log</span>
+            </a>
 
-          <div class="nav-divider"></div>
+            <a href="/audit/check" class="<%= path.includes('/audit/check') ? 'active' : '' %>" title="ตรวจหวย">
+              <i class="fas fa-search-dollar"></i>
+              <span>ตรวจหวย</span>
+            </a>
 
-          <a href="/logout" title="ออกจากระบบ">
-            <i class="fas fa-sign-out-alt"></i>
-            <span>ออกจากระบบ</span>
-          </a>
+            <a href="/users" class="<%= path.includes('/users') ? 'active' : '' %>" title="จัดการทีมงาน">
+              <i class="fas fa-users-cog"></i>
+              <span>จัดการทีมงาน</span>
+            </a>
+            <% } %>
+
+              <div class="nav-divider"></div>
+
+              <a href="/logout" title="ออกจากระบบ">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>ออกจากระบบ</span>
+              </a>
         </nav>
       </aside>
 
@@ -101,7 +118,37 @@
       <%- body %>
         <% } %>
 
+          <!-- Bootstrap 5 Bundle with Popper -->
+          <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+          <!-- SweetAlert2 -->
+          <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
           <script src="/js/ui.js"></script>
+
+          <script>
+            // Check for server-side flash messages
+            <% if (locals.flash) { %>
+              document.addEventListener('DOMContentLoaded', function () {
+                const type = '<%= locals.flash.type %>'; // success, error, warning, info
+                const message = '<%= locals.flash.message %>';
+
+                // Use the custom Toast function from ui.js (which we will add next)
+                if (typeof showToast === 'function') {
+                  showToast(type, message);
+                } else {
+                  // Fallback if ui.js not loaded yet or error
+                  Swal.fire({
+                    icon: type,
+                    title: message,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                  });
+                }
+              });
+            <% } %>
+          </script>
 </body>
 
 </html>

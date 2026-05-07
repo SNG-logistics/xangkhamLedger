@@ -1,0 +1,687 @@
+<div class="row justify-content-center fade-in-up">
+    <div class="col-12 col-xl-10">
+
+        <!-- Header Section -->
+        <div class="text-center mb-5 mt-4">
+            <h1 class="display-4 fw-bold gradient-text mb-2">ระบบตรวจสอบความถูกต้องสลาก</h1>
+            <p class="text-secondary fs-5">Audit Trail Verification System</p>
+            <div class="currency-badge">
+                <i class="fas fa-coins me-2"></i> 1 หน่วย = 1,000 กีบ
+            </div>
+        </div>
+
+        <!-- Step 1: Upload -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-8">
+                <div class="card glass-card border-0 shadow-lg" id="uploadCard">
+                    <div class="card-body p-5 text-center">
+                        <div class="step-indicator mb-4">STEP 1</div>
+                        <h2 class="h3 fw-bold mb-4">นำเข้าฐานข้อมูล</h2>
+
+                        <div id="dropZone" class="upload-zone-premium"
+                            onclick="document.getElementById('fileInput').click()">
+                            <div class="upload-content">
+                                <div class="icon-circle mb-3">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                </div>
+                                <h4 class="mb-2">ลากไฟล์ CSV มาวางที่นี่</h4>
+                                <p class="text-muted mb-0">หรือคลิกเพื่อเลือกไฟล์จากคอมพิวเตอร์</p>
+                                <span class="badge bg-light text-dark mt-3">รองรับ V.8 Big Data</span>
+                            </div>
+                        </div>
+                        <input type="file" id="fileInput" accept=".csv" style="display: none;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Stats -->
+        <div id="dashboard" class="row g-4 mb-5" style="display: none;">
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-icon bg-primary-soft">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 class="stat-value" id="totalRecords">0</h3>
+                        <p class="stat-label">จำนวนรายการ</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-icon bg-warning-soft">
+                        <i class="fas fa-hand-holding-usd"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 class="stat-value text-gold" id="totalAmount">0</h3>
+                        <p class="stat-label">ยอดขายรวม</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-icon bg-success-soft">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 class="stat-value text-success">READY</h3>
+                        <p class="stat-label">สถานะระบบ</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div id="controlPanel" class="d-flex justify-content-between align-items-center mb-4 px-3"
+            style="display: none;">
+            <div class="round-info">
+                <i class="fas fa-calendar-alt text-primary me-2"></i>
+                <span id="roundLabel" class="fw-bold text-dark">งวดประจำวันที่: -</span>
+            </div>
+            <button onclick="location.reload()" class="btn btn-outline-danger btn-sm rounded-pill px-4">
+                <i class="fas fa-redo me-1"></i> เริ่มใหม่
+            </button>
+        </div>
+
+        <!-- Step 2: Verification -->
+        <div id="auditSection" style="display: none;">
+            <div class="card glass-card border-0 shadow-lg">
+                <div class="card-body p-4 p-md-5">
+                    <div class="text-center mb-5">
+                        <div class="step-indicator mb-3 mx-auto">STEP 2</div>
+                        <h2 class="h3 fw-bold">ตรวจสอบผลรางวัล</h2>
+                        <p class="text-muted">กรอกเลขรางวัล 6 ตัวเพื่อตรวจสอบยอดจ่ายทั้งหมด</p>
+                    </div>
+
+                    <div class="search-container mx-auto mb-5">
+                        <div class="input-group input-group-lg shadow-sm">
+                            <input type="text" id="searchInput"
+                                class="form-control text-center fw-bold text-primary search-input" placeholder="883845"
+                                maxlength="6">
+                            <button class="btn btn-gradient px-5" onclick="checkNumber()">
+                                <i class="fas fa-search me-2"></i> ตรวจสอบ
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="resultArea" class="result-animate" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        --gold-gradient: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+        --glass-bg: rgba(255, 255, 255, 0.95);
+        --glass-border: rgba(255, 255, 255, 0.2);
+    }
+
+    .fade-in-up {
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .gradient-text {
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .currency-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1.5rem;
+        background: #fff3cd;
+        color: #856404;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        border: 1px solid #ffeeba;
+    }
+
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 0, 0, 0.05) !important;
+        border-radius: 24px;
+        transition: transform 0.3s ease;
+    }
+
+    .step-indicator {
+        display: inline-block;
+        padding: 0.25rem 1rem;
+        background: #e0e7ff;
+        color: #4338ca;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+    }
+
+    /* Upload Zone */
+    .upload-zone-premium {
+        border: 2px dashed #e2e8f0;
+        border-radius: 20px;
+        padding: 3rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #f8fafc;
+    }
+
+    .upload-zone-premium:hover {
+        border-color: #7c3aed;
+        background: #f5f3ff;
+        transform: translateY(-2px);
+    }
+
+    .icon-circle {
+        width: 80px;
+        height: 80px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        font-size: 2rem;
+        color: #7c3aed;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Stats Cards */
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        transition: transform 0.2s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+    }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .bg-primary-soft {
+        background: #e0e7ff;
+        color: #4338ca;
+    }
+
+    .bg-warning-soft {
+        background: #fef3c7;
+        color: #d97706;
+    }
+
+    .bg-success-soft {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .stat-label {
+        margin: 0;
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+
+    .text-gold {
+        color: #d97706;
+    }
+
+    /* Search Input */
+    .search-container {
+        max-width: 500px;
+    }
+
+    .search-input {
+        font-size: 1.5rem;
+        letter-spacing: 4px;
+        border: 2px solid #e2e8f0;
+        border-right: none;
+        padding: 1rem;
+    }
+
+    .btn-gradient {
+        background: var(--primary-gradient);
+        color: white;
+        border: none;
+        font-weight: 600;
+        transition: opacity 0.2s;
+    }
+
+    .btn-gradient:hover {
+        opacity: 0.9;
+        color: white;
+    }
+
+    /* Results */
+    .result-card {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        border: 1px solid #f1f5f9;
+        transition: all 0.3s ease;
+    }
+
+    .result-card:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .result-header {
+        padding: 1.25rem;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .winning-number {
+        font-family: 'Inter', monospace;
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: 2px;
+    }
+
+    .table-custom th {
+        background: #f8fafc;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .table-custom td {
+        vertical-align: middle;
+        padding: 1rem 0.75rem;
+    }
+
+    .amount-badge {
+        background: #fef3c7;
+        color: #b45309;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.9rem;
+    }
+
+    .total-row td {
+        background: #f8fafc;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .spinner-border-custom {
+        width: 3rem;
+        height: 3rem;
+    }
+</style>
+
+<script>
+    let lotteryData = [];
+
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    // Drag & Drop
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-primary'); });
+    dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('border-primary'); });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-primary');
+        handleFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+    function handleFiles(files) {
+        const file = files[0];
+        if (!file) return;
+
+        dropZone.innerHTML = `
+            <div class="spinner-border text-primary spinner-border-custom mb-3" role="status">
+                <span class="visually-hidden">กำลังโหลด...</span>
+            </div>
+            <h5 class="text-primary fw-bold">กำลังวิเคราะห์ข้อมูล...</h5>
+            <p id="progress-text" class="text-muted mt-2">0% ประมวลผลแล้ว</p>
+        `;
+        dropZone.onclick = null;
+
+        const roundMatch = file.name.match(/(\d{5})/);
+        if (roundMatch) {
+            document.getElementById('roundLabel').innerText = "งวดประจำวันที่: " + roundMatch[1];
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) { processCSVChunked(e.target.result); }
+        reader.readAsText(file);
+    }
+
+    function processCSVChunked(csvText) {
+        lotteryData = [];
+        let totalAmount = 0;
+        let recordCount = 0;
+        let cursor = 0;
+        const fileSize = csvText.length;
+        const batchSize = 10000;
+
+        function parseBatch() {
+            const startTime = performance.now();
+            while (cursor < fileSize) {
+                let nextNewline = csvText.indexOf('\n', cursor);
+                if (nextNewline === -1) nextNewline = fileSize;
+                const line = csvText.substring(cursor, nextNewline).trim();
+                cursor = nextNewline + 1;
+
+                if (line && line.charCodeAt(0) !== 239 && !line.startsWith("ประเภท") && !line.startsWith("Type")) {
+                    const parts = line.split(',');
+                    let number = null;
+                    let amount = 0;
+
+                    if (parts.length >= 4) {
+                        number = parts[3].trim();
+                        amount = parseInt(parts[2].trim()) || 0;
+                    } else if (parts.length >= 2) {
+                        number = parts[0].trim();
+                        amount = parseInt(parts[1].trim()) || 0;
+                    }
+
+                    if (number) {
+                        lotteryData.push({ number, amount });
+                        totalAmount += amount;
+                        recordCount++;
+                    }
+                }
+
+                if (recordCount % batchSize === 0) {
+                    if (performance.now() - startTime > 15) {
+                        const progress = Math.min(99, Math.round((cursor / fileSize) * 100));
+                        const textEl = document.getElementById('progress-text');
+                        if (textEl) textEl.innerText = `${progress}% ประมวลผลแล้ว`;
+                        setTimeout(parseBatch, 0);
+                        return;
+                    }
+                }
+            }
+            finishLoad(recordCount, totalAmount);
+        }
+        parseBatch();
+    }
+
+    function finishLoad(count, amount) {
+        // Smooth transition
+        const uploadCard = document.getElementById('uploadCard');
+        uploadCard.style.opacity = '0';
+        setTimeout(() => {
+            uploadCard.parentElement.parentElement.style.display = 'none';
+            fadeIn(document.getElementById('dashboard'));
+            fadeIn(document.getElementById('controlPanel'));
+            fadeIn(document.getElementById('auditSection'));
+        }, 300);
+
+        document.getElementById('totalRecords').innerText = count.toLocaleString();
+        document.getElementById('totalAmount').innerText = amount.toLocaleString();
+    }
+
+    function fadeIn(element) {
+        element.style.opacity = 0;
+        element.style.display = 'flex'; // or whatever display type it was (row/flex)
+        if (element.id === 'dashboard') element.classList.add('row');
+
+        let opacity = 0;
+        const timer = setInterval(function () {
+            if (opacity >= 1) {
+                clearInterval(timer);
+            }
+            element.style.opacity = opacity;
+            opacity += 0.1;
+        }, 30);
+    }
+
+    function checkNumber() {
+        const winNum = document.getElementById('searchInput').value.replace(/[^0-9]/g, '');
+        const resultArea = document.getElementById('resultArea');
+
+        if (!winNum || winNum.length !== 6) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ข้อมูลไม่ครบถ้วน',
+                text: 'กรุณากรอกเลข 6 หลักให้ครบถ้วน',
+                confirmButtonColor: '#4f46e5'
+            });
+            return;
+        }
+
+        resultArea.style.display = 'block';
+        let htmlContent = "";
+        htmlContent += calculateMainPrizes(winNum);
+        htmlContent += calculateFrontPromo(winNum);
+        htmlContent += calculateAnagramPromo(winNum);
+        resultArea.innerHTML = htmlContent;
+
+        // Scroll to results
+        resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // --- RENDER FUNCTIONS ---
+
+    function calculateMainPrizes(winNum) {
+        let matches = {
+            tier6: { count: 0, sale: 0, payout: 0, rate: 400000, label: "6 ตัวตรง (รางวัลที่ 1)" },
+            tier5: { count: 0, sale: 0, payout: 0, rate: 40000, label: "5 ตัวท้าย (รางวัลที่ 2)" },
+            tier4: { count: 0, sale: 0, payout: 0, rate: 5000, label: "4 ตัวท้าย (รางวัลที่ 3)" },
+            tier3: { count: 0, sale: 0, payout: 0, rate: 500, label: "3 ตัวท้าย (รางวัลที่ 4)" },
+            tier2: { count: 0, sale: 0, payout: 0, rate: 60, label: "2 ตัวท้าย (รางวัลที่ 5)" },
+        };
+
+        const suffix5 = winNum.substring(1);
+        const suffix4 = winNum.substring(2);
+        const suffix3 = winNum.substring(3);
+        const suffix2 = winNum.substring(4);
+
+        for (let item of lotteryData) {
+            const ticket = item.number;
+            const amount = item.amount;
+            const len = ticket.length;
+
+            if (len === 6 && ticket === winNum) { updateMatch(matches.tier6, amount); }
+            else if (len === 5 && ticket === suffix5) { updateMatch(matches.tier5, amount); }
+            else if (len === 4 && ticket === suffix4) { updateMatch(matches.tier4, amount); }
+            else if (len === 3 && ticket === suffix3) { updateMatch(matches.tier3, amount); }
+            else if (len === 2 && ticket === suffix2) { updateMatch(matches.tier2, amount); }
+        }
+
+        const total = Object.values(matches).reduce((sum, m) => sum + m.payout, 0);
+
+        return `
+        <div class="result-card">
+            <div class="result-header">
+                <div>
+                    <h5 class="fw-bold text-dark mb-0">🏆 รางวัลหลัก (Main Prizes)</h5>
+                </div>
+                <div class="winning-number">${winNum}</div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-custom mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">เงื่อนไข</th>
+                            <th class="text-end">เลขที่ถูก</th>
+                            <th class="text-end">ซื้อ (หน่วย)</th>
+                            <th class="text-end pe-4">จ่าย (หน่วย)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${renderRow(matches.tier6, winNum, true)}
+                        ${renderRow(matches.tier5, suffix5, true)}
+                        ${renderRow(matches.tier4, suffix4, true)}
+                        ${renderRow(matches.tier3, suffix3, true)}
+                        ${renderRow(matches.tier2, suffix2, true)}
+                        <tr class="total-row">
+                            <td colspan="3" class="ps-4 text-end text-secondary">รวมยอดจ่ายรางวัลหลัก</td>
+                            <td class="text-end pe-4 text-success fs-5">${total.toLocaleString()}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+    }
+
+    function calculateFrontPromo(winNum) {
+        let matches = {
+            front5: { count: 0, sale: 0, payout: 0, rate: 5000, label: "โปร 5 ตัวหน้า" },
+            front4: { count: 0, sale: 0, payout: 0, rate: 1000, label: "โปร 4 ตัวหน้า" },
+            front3: { count: 0, sale: 0, payout: 0, rate: 50, label: "โปร 3 ตัวหน้า" },
+            front2: { count: 0, sale: 0, payout: 0, rate: 1, label: "โปร 2 ตัวหน้า" }
+        };
+
+        for (let item of lotteryData) {
+            if (item.number.length !== 6) continue;
+            const t = item.number;
+            const a = item.amount;
+            if (t.startsWith(winNum.substring(0, 5))) updateMatch(matches.front5, a);
+            else if (t.startsWith(winNum.substring(0, 4))) updateMatch(matches.front4, a);
+            else if (t.startsWith(winNum.substring(0, 3))) updateMatch(matches.front3, a);
+            else if (t.startsWith(winNum.substring(0, 2))) updateMatch(matches.front2, a);
+        }
+
+        const total = Object.values(matches).reduce((sum, m) => sum + m.payout, 0);
+
+        return `
+        <div class="result-card border-top-purple">
+            <div class="result-header">
+                <div><h5 class="fw-bold text-primary mb-0">🎁 โปรเลขหน้า (Front Promo)</h5></div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-custom mb-0">
+                    <thead>
+                        <tr><th class="ps-4">เงื่อนไข</th><th class="text-end">เลขหน้า</th><th class="text-end">ซื้อ</th><th class="text-end pe-4">จ่าย</th></tr>
+                    </thead>
+                    <tbody>
+                        ${renderRow(matches.front5, winNum.substring(0, 5) + "x", false)}
+                        ${renderRow(matches.front4, winNum.substring(0, 4) + "xx", false)}
+                        ${renderRow(matches.front3, winNum.substring(0, 3) + "xxx", false)}
+                        ${renderRow(matches.front2, winNum.substring(0, 2) + "xxxx", false)}
+                        <tr class="total-row">
+                            <td colspan="3" class="ps-4 text-end text-secondary">รวมโปรหน้า</td>
+                            <td class="text-end pe-4 text-success fs-5">${total.toLocaleString()}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+    }
+
+    function calculateAnagramPromo(winNum) {
+        let matches = {
+            len6: { count: 0, sale: 0, payout: 0, rate: 45, label: "สลับ 6 ตัว" },
+            len5: { count: 0, sale: 0, payout: 0, rate: 35, label: "สลับ 5 ตัวท้าย" },
+            len4: { count: 0, sale: 0, payout: 0, rate: 25, label: "สลับ 4 ตัวท้าย" }
+        };
+        const s = (str) => str.split('').sort().join('');
+        const t6 = s(winNum), t5 = s(winNum.substring(1)), t4 = s(winNum.substring(2));
+
+        for (let item of lotteryData) {
+            const len = item.number.length;
+            const sorted = s(item.number);
+            const a = item.amount;
+            if (len === 6 && sorted === t6) updateMatch(matches.len6, a);
+            else if (len === 5 && sorted === t5) updateMatch(matches.len5, a);
+            else if (len === 4 && sorted === t4) updateMatch(matches.len4, a);
+        }
+
+        const total = Object.values(matches).reduce((sum, m) => sum + m.payout, 0);
+
+        return `
+        <div class="result-card border-top-pink">
+            <div class="result-header">
+                <div><h5 class="fw-bold text-danger mb-0">🔀 โปรเลขสลับ (Anagram)</h5></div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-custom mb-0">
+                    <thead>
+                        <tr><th class="ps-4">เงื่อนไข</th><th class="text-end">ซื้อ</th><th class="text-end pe-4">จ่าย</th></tr>
+                    </thead>
+                    <tbody>
+                        ${renderRow(matches.len6, null, false)}
+                        ${renderRow(matches.len5, null, false)}
+                        ${renderRow(matches.len4, null, false)}
+                        <tr class="total-row">
+                            <td colspan="2" class="ps-4 text-end text-secondary">รวมโปรสลับ</td>
+                            <td class="text-end pe-4 text-success fs-5">${total.toLocaleString()}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+    }
+
+    function updateMatch(match, amount) {
+        match.count++;
+        match.sale += amount;
+        match.payout += (amount * match.rate);
+    }
+
+    function renderRow(data, pattern, isMain) {
+        const patternCell = pattern ? `<td class="text-end font-monospace text-primary fw-bold">${pattern}</td>` : '';
+        const payoutClass = data.payout > 0 ? "amount-badge" : "text-muted";
+
+        if (pattern === null && isMain === false) { // Anagram case
+            return `<tr>
+                <td class="ps-4">${data.label} <span class="badge bg-light text-secondary ms-2">x${data.rate}</span></td>
+                <td class="text-end text-secondary">${data.sale.toLocaleString()}</td>
+                <td class="text-end pe-4"><span class="${payoutClass}">${data.payout.toLocaleString()}</span></td>
+            </tr>`;
+        }
+
+        return `<tr>
+            <td class="ps-4">${data.label} <span class="badge bg-light text-secondary ms-2">x${data.rate}</span></td>
+            ${patternCell}
+            <td class="text-end text-secondary">${data.sale.toLocaleString()}</td>
+            <td class="text-end pe-4"><span class="${payoutClass}">${data.payout.toLocaleString()}</span></td>
+        </tr>`;
+    }
+
+    document.getElementById('searchInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') checkNumber();
+    });
+</script>
