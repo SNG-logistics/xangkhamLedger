@@ -157,7 +157,11 @@
                                                 <%= exp.category %>
                                             </td>
                                             <td>
-                                                <%= exp.description %>
+                                                <% if (exp.description && exp.description.startsWith('🤖')) { %>
+                                                    <span title="เพิ่มโดย AI ตรวจบิล" style="display:inline-block;background:#7c3aed;color:#fff;border-radius:4px;padding:1px 5px;font-size:0.7rem;margin-right:4px;">🤖</span><%= exp.description.substring(2).trim() %>
+                                                <% } else { %>
+                                                    <%= exp.description %>
+                                                <% } %>
                                             </td>
                                             <td class="money lak">
                                                 <%= money.format(exp.amount_lak) %>
@@ -998,7 +1002,7 @@
                                 async function quickAddExpenseWithSelect(selectId, originalCategory, amount, btn) {
                                     const selectEl = document.getElementById(selectId);
                                     const selectedCategory = selectEl.value;
-                                    const description = 'เพิ่มจากระบบตรวจบิล AI (AI อ่านเจอเป็น: ' + originalCategory + ')';
+                                    const description = '🤖 ' + originalCategory;
                                     
                                     btn.innerHTML = '...';
                                     btn.disabled = true;

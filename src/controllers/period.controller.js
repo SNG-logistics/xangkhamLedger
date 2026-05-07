@@ -499,22 +499,22 @@ const periodController = {
             // Get System Expenses
             const expenses = await Expense.findByPeriod(periodId);
 
-            // Build amount pool from individual expenses (consumable — prevents double-matching)
-            // Each entry: { amount, category, used: false }
-            const systemAmountPool = [];
-            let systemPromotionPool = [];
+            // Build ONE unified amount pool from ALL expenses (consumable — prevents double-matching)
+            // Previously split into promotion/non-promotion which caused AI-added promotion
+            // expenses to be invisible during re-check (they lived in a pool that wasn't searched).
+            const systemAmountPool = expenses.map(exp => ({
+                amount: parseFloat(exp.amount_lak) || 0,
+                category: exp.category || 'Unknown',
+                used: false
+            }));
 
-            expenses.forEach(exp => {
-                const cat = exp.category || 'Unknown';
-                const amount = parseFloat(exp.amount_lak) || 0;
-                if (cat.toUpperCase().includes('PROMOTION') || cat.includes('โปรโมชั่น') || cat.includes('โปรโมชัน') || cat.includes('โปร')) {
-                    systemPromotionPool.push({ amount, category: cat, used: false });
-                } else {
-                    systemAmountPool.push({ amount, category: cat, used: false });
-                }
-            });
-
-            const systemPromotions = systemPromotionPool.reduce((sum, e) => sum + e.amount, 0);
+            // Promotion total is still calculated for the summary section at the bottom
+            const systemPromotions = systemAmountPool
+                .filter(e => e.category.toUpperCase().includes('PROMOTION') ||
+                             e.category.includes('โปรโมชั่น') ||
+                             e.category.includes('โปรโมชัน') ||
+                             e.category.includes('โปร'))
+                .reduce((sum, e) => sum + e.amount, 0);
 
             const missingInSystem = [];
             const discrepancies = [];
