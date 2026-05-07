@@ -414,6 +414,8 @@ const periodController = {
         try {
             const periodId = req.params.id;
             const savedImagePath = path.join(__dirname, '../public/uploads', `recon_period_${periodId}.jpg`);
+            const period = await Period.findById(periodId);
+            const periodDateStr = period ? new Date(period.period_date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
 
             let base64Image, mimeType;
 
@@ -443,26 +445,22 @@ const periodController = {
             }
 
             const prompt = `
-            คุณเป็นนักบัญชีผู้เชี่ยวชาญ กรุณาวิเคราะห์รูปภาพสรุปบัญชี/รายจ่ายนี้
-            
-            สิ่งที่ต้องดึงออกมา:
-            1. ชื่อหมวดหมู่รายจ่ายและจำนวนเงิน (LAK)
-            2. QUAN สำคัญ: ให้ใช้ข้อความในรูปตรงๆ เป็นชื่อ category — ห้ามแปลเป็นภาษาอังกฤษ ให้ใช้ภาษาไทย/ลาว ตามที่เห็นในรูป
-            3. หากมีส่วน 'โปรโมชั่น' หรือ 'Promotion' ให้รวมยอดด้วย
-            
-            กฎ JSON ที่ต้องปฏิบัติ:
-            1. ห้ามมี newline ภายใน string value — ให้ใช้ space แทน
-            2. ห้ามมี double quote ที่ไม่ได้ escape ภายใน string value
-            3. JSON ต้องถูกต้องสมบูรณ์
-            
-            ตอบกลับเป็น JSON เท่านั้น ไม่ต้องมี markdown:
+            คุณเป็นนักบัญชีผู้เชี่ยวชาญ กรุณาวิเคราะห์รูปภาพสรุปบัญชี/รายจ่ายงวด ${periodDateStr}
+
+            กฎสำคัญ:
+            1. ใช้ชื่อตามในรูปภาษาไทย/ลาว ห้ามแปลเป็นอังกฤษ
+            2. รายการที่ระบุว่า "(เพิ่มเติม)" หรือเป็นของงวดวันอื่น (ไม่ใช่งวด ${periodDateStr}) ให้ใส่ cross_day: true
+            3. ห้ามมี newline ใน string value ให้ใช้ space แทน
+            4. JSON ต้องถูกต้องสมบูรณ์ ไม่ต้องมี markdown
+
+            ตอบกลับเป็น JSON เท่านั้น:
             {
               "items": [
-                {"category": "ชื่อหมวดหมู่ตามในรูป (ภาษาไทย/ลาว)", "amount_lak": 100000}
+                {"category": "ชื่อตามในรูป", "amount_lak": 100000, "cross_day": false}
               ],
               "promotions": {
                 "total_promotions_lak": 50000,
-                "details": "ข้อความเพิ่มเติม (ถ้ามี)"
+                "details": ""
               }
             }
             `;
@@ -557,9 +555,16 @@ const periodController = {
                 const cat = item.category || 'Unknown';
                 const amount = parseFloat(item.amount_lak) || 0;
 
-                // 1. Skip prize-related items — they are already deducted in the period summary
+                // 1. Skip prize-related items
                 if (isPrizeItem(cat)) {
                     matched.push({ category: cat + ' (ยอดถูกรางวัล — คำนวณแล้วในสูตร)', amount: amount });
+                    return;
+                }
+
+                // 1b. Cross-day items — labeled for reference, not flagged as missing
+                const isCrossDay = item.cross_day === true || cat.includes('เพิ่มเติม');
+                if (isCrossDay) {
+                    matched.push({ category: '📅 ' + cat + ' (รายการข้ามวัน)', amount: amount });
                     return;
                 }
 
