@@ -698,9 +698,13 @@ const periodController = {
             const base64Image = imageBuffer.toString('base64');
             const mimeType = 'image/jpeg';
             
-            const apiKey = process.env.AI_VISION_API_KEY;
-            const baseUrl = process.env.AI_VISION_API_BASE_URL || 'https://api.openai.com/v1';
-            const model = process.env.AI_VISION_MODEL || 'gpt-4o-mini';
+            const apiKey = process.env.COMET_API_KEY;
+            const baseUrl = process.env.AI_VISION_BASE_URL || 'https://api.cometapi.com/v1';
+            const model = process.env.AI_VISION_MODEL || 'gemini-3-flash';
+
+            if (!apiKey) {
+                return res.status(500).json({ error: "COMET_API_KEY is not configured" });
+            }
 
             const prompt = `
             คุณเป็นนักบัญชี นี่คือหน้าจอ Dashboard สรุปการจ่ายโปรโมชั่น
