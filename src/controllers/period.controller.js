@@ -492,19 +492,23 @@ const periodController = {
 
             // Get System Expenses
             const expenses = await Expense.findByPeriod(periodId);
-            const systemSummary = {};
-            let systemPromotions = 0;
-            
+
+            // Build amount pool from individual expenses (consumable — prevents double-matching)
+            // Each entry: { amount, category, used: false }
+            const systemAmountPool = [];
+            let systemPromotionPool = [];
+
             expenses.forEach(exp => {
                 const cat = exp.category || 'Unknown';
                 const amount = parseFloat(exp.amount_lak) || 0;
-                
                 if (cat.toUpperCase().includes('PROMOTION') || cat.includes('โปรโมชั่น') || cat.includes('โปรโมชัน') || cat.includes('โปร')) {
-                    systemPromotions += amount;
+                    systemPromotionPool.push({ amount, category: cat, used: false });
                 } else {
-                    systemSummary[cat] = (systemSummary[cat] || 0) + amount;
+                    systemAmountPool.push({ amount, category: cat, used: false });
                 }
             });
+
+            const systemPromotions = systemPromotionPool.reduce((sum, e) => sum + e.amount, 0);
 
             const missingInSystem = [];
             const discrepancies = [];
@@ -524,14 +528,31 @@ const periodController = {
                 const cat = item.category || 'Unknown';
                 const amount = parseFloat(item.amount_lak) || 0;
 
-                // Skip prize-related items — they are already deducted in the period summary
+                // 1. Skip prize-related items — they are already deducted in the period summary
                 if (isPrizeItem(cat)) {
                     matched.push({ category: cat + ' (ยอดถูกรางวัล — คำนวณแล้วในสูตร)', amount: amount });
                     return;
                 }
-                
+
+                // 2. PRIMARY: Amount-pool matching (exact amount, consume the entry)
+                //    This handles the case where category names differ but the amount is the same
+                //    e.g. AI reads "อากรค่ารับเหมา 180,000,000" but system has "5. ภาษีอากร 180,000,000"
+                const amountMatchIdx = systemAmountPool.findIndex(
+                    e => !e.used && Math.abs(e.amount - amount) <= 1
+                );
+
+                if (amountMatchIdx !== -1) {
+                    systemAmountPool[amountMatchIdx].used = true;
+                    const sysCat = systemAmountPool[amountMatchIdx].category;
+                    systemChecked.add(sysCat);
+                    matched.push({ category: cat + ' → ' + sysCat, amount: amount });
+                    return;
+                }
+
+                // 3. FALLBACK: Category string matching (for items not yet in system)
                 let matchedSysCat = null;
-                for (const sysCat of Object.keys(systemSummary)) {
+                for (const entry of systemAmountPool.filter(e => !e.used)) {
+                    const sysCat = entry.category;
                     if (sysCat.toLowerCase().includes(cat.toLowerCase()) || cat.toLowerCase().includes(sysCat.toLowerCase())) {
                         matchedSysCat = sysCat;
                         break;
@@ -539,24 +560,34 @@ const periodController = {
                 }
 
                 if (matchedSysCat) {
-                    systemChecked.add(matchedSysCat);
-                    const sysAmount = systemSummary[matchedSysCat];
-                    const diff = amount - sysAmount;
+                    // Mark all pool entries for this category as used
+                    const sysTotal = systemAmountPool
+                        .filter(e => !e.used && e.category === matchedSysCat)
+                        .reduce((sum, e) => { e.used = true; return sum + e.amount; }, 0);
                     
+                    systemChecked.add(matchedSysCat);
+                    const diff = amount - sysTotal;
                     if (Math.abs(diff) > 0.01) {
-                        discrepancies.push({ category: cat, image_amount: amount, system_amount: sysAmount, difference: diff });
+                        discrepancies.push({ category: cat, image_amount: amount, system_amount: sysTotal, difference: diff });
                     } else {
                         matched.push({ category: cat, amount: amount });
                     }
                 } else {
+                    // 4. Truly missing — no amount match and no category name match
                     missingInSystem.push({ category: cat, amount: amount });
                 }
             });
 
             const missingInImage = [];
-            for (const [sysCat, sysAmount] of Object.entries(systemSummary)) {
-                if (!systemChecked.has(sysCat)) {
-                    missingInImage.push({ category: sysCat, system_amount: sysAmount });
+            // Items in system (unmatched pool entries) that have no corresponding image item
+            const usedCats = new Set(systemAmountPool.filter(e => e.used).map(e => e.category));
+            for (const entry of systemAmountPool.filter(e => !e.used)) {
+                // Group by category to avoid duplicates
+                if (!missingInImage.find(m => m.category === entry.category)) {
+                    const totalAmt = systemAmountPool
+                        .filter(e => !e.used && e.category === entry.category)
+                        .reduce((s, e) => s + e.amount, 0);
+                    missingInImage.push({ category: entry.category, system_amount: totalAmt });
                 }
             }
 
