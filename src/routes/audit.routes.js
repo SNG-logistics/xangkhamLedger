@@ -8,5 +8,6 @@ const auth = require('../middleware/auth');
 router.get('/', auth.requireAdmin, auditController.logs);
 router.get('/logs', auth.requireAdmin, auditController.logs);
 router.get('/check', auth.requireAdmin, auditController.check);
+router.post('/fetch-direct', auth.requireAdmin, auditController.fetchDirect);
 
 module.exports = router;

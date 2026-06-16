@@ -440,6 +440,32 @@
                                 <%= money.format(totals.netLak) %>
                         </td>
                         <td class="text-right" style="padding: 15px; color: #ccc;">(3-4+5)</td>
+                    </tr>
+
+                    <!-- Spacer -->
+                    <tr>
+                        <td colspan="3" style="border:none; height: 10px;"></td>
+                    </tr>
+
+                    <tr class="row-stripe">
+                        <td><strong>รายการเคลื่อนไหวทุน (Capital / Cashflow)</strong></td>
+                        <td class="text-right"></td>
+                        <td class="text-right text-muted"><em>ไม่กระทบกำไรสุทธิ</em></td>
+                    </tr>
+                    <tr class="row-stripe">
+                        <td style="padding-left: 20px;">+ เติมเงิน / เติมทุน (Capital Injection)</td>
+                        <td class="text-right" style="color: #2e7d32;">
+                            <%= money.format(totals.injectionLak) %>
+                        </td>
+                        <td class="text-right text-muted"></td>
+                    </tr>
+                    <tr class="row-stripe">
+                        <td style="padding-left: 20px;">- คืนทุน / ถอนกำไร (Capital Return)</td>
+                        <td class="text-right" style="color: #c62828;">
+                            <%= money.format(totals.returnLak) %>
+                        </td>
+                        <td class="text-right text-muted"></td>
+                    </tr>
                 </tbody>
             </table>
 
@@ -500,6 +526,9 @@
                         <th class="text-right">กำไรโยน</th>
                         <th class="text-right">ค่าใช้จ่าย</th>
                         <th class="text-right">กำไรสุทธิ (Net)</th>
+                        <th class="text-right" style="color: #2e7d32; background: #e8f5e9;">เติมทุน</th>
+                        <th class="text-right" style="color: #c62828; background: #ffebee;">คืนทุน</th>
+                        <th class="text-right" style="background: #e3f2fd; color: #1565c0;">ยอดเคลื่อนไหว (Cashflow)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -509,11 +538,12 @@
                         (parseFloat(period.profit_throwing) || 0) -
                         (parseFloat(period.total_expenses) || 0);
                         const pColor = net_profit >= 0 ? '#2e7d32' : '#c62828';
+                        const cashflow = net_profit + (period.injectionLak || 0) - (period.returnLak || 0);
+                        const cColor = cashflow >= 0 ? '#1565c0' : '#c62828';
                         %>
                         <tr class="row-stripe">
                             <td>
-                                <%= new Date(period.period_date).toLocaleDateString('th-TH', { day: 'numeric' ,
-                                    month: 'short' }) %>
+                                <%= new Date(period.period_date).toLocaleDateString('th-TH', { day: 'numeric' , month: 'short' }) %>
                             </td>
                             <td class="text-right">
                                 <%= money.format(period.gross_sales) %>
@@ -526,6 +556,15 @@
                             </td>
                             <td class="text-right font-bold" style="color: <%= pColor %>;">
                                 <%= money.format(net_profit) %>
+                            </td>
+                            <td class="text-right" style="color: #2e7d32; background: #f1f8e9;">
+                                <%= money.format(period.injectionLak) %>
+                            </td>
+                            <td class="text-right" style="color: #c62828; background: #ffebee;">
+                                <%= money.format(period.returnLak) %>
+                            </td>
+                            <td class="text-right font-bold" style="color: <%= cColor %>; background: #e3f2fd;">
+                                <%= money.format(cashflow) %>
                             </td>
                         </tr>
                         <% }) %>
@@ -540,8 +579,17 @@
                                 </td>
                                 <td class="text-right">- <%= money.format(totals.expensesLak) %>
                                 </td>
-                                <td class="text-right">
+                                <td class="text-right font-bold">
                                     <%= money.format(totals.netLak) %>
+                                </td>
+                                <td class="text-right" style="color: #2e7d32; background: #f1f8e9;">
+                                    <%= money.format(totals.injectionLak) %>
+                                </td>
+                                <td class="text-right" style="color: #c62828; background: #ffebee;">
+                                    <%= money.format(totals.returnLak) %>
+                                </td>
+                                <td class="text-right font-bold" style="background: #e3f2fd; color: #1565c0;">
+                                    <%= money.format(totals.netLak + totals.injectionLak - totals.returnLak) %>
                                 </td>
                             </tr>
                 </tbody>

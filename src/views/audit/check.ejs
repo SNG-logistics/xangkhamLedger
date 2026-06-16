@@ -1,3 +1,6 @@
+<!-- CDN for SheetJS (XLSX parsing) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 <div class="row justify-content-center fade-in-up">
     <div class="col-12 col-xl-10">
 
@@ -10,26 +13,126 @@
             </div>
         </div>
 
-        <!-- Step 1: Upload -->
+        <!-- Step 1: Upload / Fetch Selection -->
         <div class="row justify-content-center mb-5">
-            <div class="col-md-8">
-                <div class="card glass-card border-0 shadow-lg" id="uploadCard">
-                    <div class="card-body p-5 text-center">
-                        <div class="step-indicator mb-4">STEP 1</div>
-                        <h2 class="h3 fw-bold mb-4">นำเข้าฐานข้อมูล</h2>
+            <div class="col-12 col-lg-10">
+                <!-- Tab Switcher -->
+                <div class="d-flex justify-content-center mb-4">
+                    <div class="btn-group p-1 bg-light rounded-pill shadow-sm" role="group">
+                        <button type="button" class="btn active-tab-btn rounded-pill px-4 py-2" id="tabApiBtn" onclick="switchTab('api')">
+                            <i class="fas fa-sync-alt me-2"></i>ดึงข้อมูลอัตโนมัติ (API)
+                        </button>
+                        <button type="button" class="btn text-secondary rounded-pill px-4 py-2" id="tabUploadBtn" onclick="switchTab('upload')">
+                            <i class="fas fa-file-excel me-2"></i>อัปโหลดไฟล์ Excel / CSV
+                        </button>
+                    </div>
+                </div>
 
-                        <div id="dropZone" class="upload-zone-premium"
-                            onclick="document.getElementById('fileInput').click()">
-                            <div class="upload-content">
-                                <div class="icon-circle mb-3">
-                                    <i class="fas fa-cloud-upload-alt"></i>
+                <div class="card glass-card border-0 shadow-lg" id="uploadCard">
+                    <div class="card-body p-4 p-md-5">
+                        <div class="text-center">
+                            <div class="step-indicator mb-4">STEP 1</div>
+                            <h2 class="h3 fw-bold mb-4" id="step1Title">ดึงข้อมูลหวย</h2>
+                        </div>
+
+                        <!-- Tab Content 1: API Fetching -->
+                        <div id="apiFetchSection" class="text-center py-2">
+                            <div class="mx-auto" style="max-width: 450px;">
+                                <div class="mb-4">
+                                    <label for="roundNoInput" class="form-label text-secondary fw-semibold mb-2 d-block text-start">เลขงวดประจำสลาก (เช่น 26087)</label>
+                                    <div class="input-group input-group-lg shadow-sm">
+                                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-calendar-day text-muted"></i></span>
+                                        <input type="text" id="roundNoInput" class="form-control border-start-0 ps-0 text-center fw-bold text-dark" placeholder="26087" value="26087">
+                                    </div>
                                 </div>
-                                <h4 class="mb-2">ลากไฟล์ CSV มาวางที่นี่</h4>
-                                <p class="text-muted mb-0">หรือคลิกเพื่อเลือกไฟล์จากคอมพิวเตอร์</p>
-                                <span class="badge bg-light text-dark mt-3">รองรับ V.8 Big Data</span>
+
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label for="tokenInput" class="form-label text-secondary fw-semibold mb-0">Token / Authorization Header</label>
+                                        <button class="btn btn-link btn-sm text-decoration-none p-0 text-primary" onclick="showSnifferGuide()"><i class="fas fa-question-circle me-1"></i>ดึงจากช้างคำยังไง?</button>
+                                    </div>
+                                    <div class="input-group input-group-lg shadow-sm">
+                                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-key text-muted"></i></span>
+                                        <textarea id="tokenInput" class="form-control border-start-0 ps-0" placeholder="วาง Bearer Token หรือสิทธิ์เข้าใช้งานช้างคำที่นี่..." rows="2" style="font-size: 0.9rem; resize: none;"></textarea>
+                                    </div>
+                                </div>
+
+                                <button id="btnFetchApi" class="btn btn-gradient btn-lg w-100 py-3 rounded-3 shadow-md mt-2" onclick="fetchFromApiDirectly()">
+                                    <i class="fas fa-cloud-download-alt me-2"></i>ดึงและตรวจสอบข้อมูลทันที
+                                </button>
                             </div>
                         </div>
-                        <input type="file" id="fileInput" accept=".csv" style="display: none;">
+
+                        <!-- Tab Content 2: File Upload (5 Slots for separated digits) -->
+                        <div id="fileUploadSection" class="py-2" style="display: none;">
+                            <h4 class="h5 fw-bold text-center mb-4">อัปโหลดไฟล์ Excel / CSV แยกตามหลักตัวเลข</h4>
+                            
+                            <!-- Row 1: 6, 5, 4 Digits -->
+                            <div class="row g-3 justify-content-center mb-3">
+                                <div class="col-md-4">
+                                    <div class="upload-slot-premium" id="dropZone6" onclick="document.getElementById('fileInput6').click()">
+                                        <div class="upload-slot-content w-100">
+                                            <div class="slot-icon-wrapper mx-auto mb-2 bg-primary-soft text-primary"><i class="fas fa-file-excel"></i></div>
+                                            <h5 class="fw-bold fs-6 mb-1">เลข 6 ตัว</h5>
+                                            <p class="text-muted small mb-0 text-truncate px-2" id="label6">ลากวาง หรือ คลิกเลือกไฟล์</p>
+                                        </div>
+                                        <input type="file" id="fileInput6" accept=".csv, .xlsx, .xls" style="display: none;" onchange="handleSlotFile(6, this.files)">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="upload-slot-premium" id="dropZone5" onclick="document.getElementById('fileInput5').click()">
+                                        <div class="upload-slot-content w-100">
+                                            <div class="slot-icon-wrapper mx-auto mb-2 bg-primary-soft text-primary"><i class="fas fa-file-excel"></i></div>
+                                            <h5 class="fw-bold fs-6 mb-1">เลข 5 ตัว</h5>
+                                            <p class="text-muted small mb-0 text-truncate px-2" id="label5">ลากวาง หรือ คลิกเลือกไฟล์</p>
+                                        </div>
+                                        <input type="file" id="fileInput5" accept=".csv, .xlsx, .xls" style="display: none;" onchange="handleSlotFile(5, this.files)">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="upload-slot-premium" id="dropZone4" onclick="document.getElementById('fileInput4').click()">
+                                        <div class="upload-slot-content w-100">
+                                            <div class="slot-icon-wrapper mx-auto mb-2 bg-primary-soft text-primary"><i class="fas fa-file-excel"></i></div>
+                                            <h5 class="fw-bold fs-6 mb-1">เลข 4 ตัว</h5>
+                                            <p class="text-muted small mb-0 text-truncate px-2" id="label4">ลากวาง หรือ คลิกเลือกไฟล์</p>
+                                        </div>
+                                        <input type="file" id="fileInput4" accept=".csv, .xlsx, .xls" style="display: none;" onchange="handleSlotFile(4, this.files)">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Row 2: 3, 2 Digits -->
+                            <div class="row g-3 justify-content-center mb-4">
+                                <div class="col-md-4">
+                                    <div class="upload-slot-premium" id="dropZone3" onclick="document.getElementById('fileInput3').click()">
+                                        <div class="upload-slot-content w-100">
+                                            <div class="slot-icon-wrapper mx-auto mb-2 bg-primary-soft text-primary"><i class="fas fa-file-excel"></i></div>
+                                            <h5 class="fw-bold fs-6 mb-1">เลข 3 ตัว</h5>
+                                            <p class="text-muted small mb-0 text-truncate px-2" id="label3">ลากวาง หรือ คลิกเลือกไฟล์</p>
+                                        </div>
+                                        <input type="file" id="fileInput3" accept=".csv, .xlsx, .xls" style="display: none;" onchange="handleSlotFile(3, this.files)">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="upload-slot-premium" id="dropZone2" onclick="document.getElementById('fileInput2').click()">
+                                        <div class="upload-slot-content w-100">
+                                            <div class="slot-icon-wrapper mx-auto mb-2 bg-primary-soft text-primary"><i class="fas fa-file-excel"></i></div>
+                                            <h5 class="fw-bold fs-6 mb-1">เลข 2 ตัว</h5>
+                                            <p class="text-muted small mb-0 text-truncate px-2" id="label2">ลากวาง หรือ คลิกเลือกไฟล์</p>
+                                        </div>
+                                        <input type="file" id="fileInput2" accept=".csv, .xlsx, .xls" style="display: none;" onchange="handleSlotFile(2, this.files)">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Process Actions -->
+                            <div class="text-center pt-2">
+                                <button id="btnProcessUploadedFiles" class="btn btn-gradient btn-lg px-5 py-3 rounded-pill shadow-md opacity-50" onclick="processAllUploadedSlots()" disabled>
+                                    <i class="fas fa-cogs me-2"></i>ประมวลผลสลากทุกไฟล์ (<span id="selectedCount">0</span>/5)
+                                </button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -140,6 +243,7 @@
     .gradient-text {
         background: var(--primary-gradient);
         -webkit-background-clip: text;
+        background-clip: text;
         -webkit-text-fill-color: transparent;
     }
 
@@ -174,34 +278,53 @@
         letter-spacing: 1px;
     }
 
-    /* Upload Zone */
-    .upload-zone-premium {
+    /* Tab styles */
+    .active-tab-btn {
+        background: var(--primary-gradient);
+        color: white !important;
+        box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.3);
+    }
+
+    /* Upload Slots */
+    .upload-slot-premium {
         border: 2px dashed #e2e8f0;
-        border-radius: 20px;
-        padding: 3rem;
+        border-radius: 16px;
+        padding: 1.75rem 1rem;
         cursor: pointer;
         transition: all 0.3s ease;
         background: #f8fafc;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
     }
 
-    .upload-zone-premium:hover {
+    .upload-slot-premium:hover, .upload-slot-premium.active-drag {
         border-color: #7c3aed;
         background: #f5f3ff;
         transform: translateY(-2px);
     }
 
-    .icon-circle {
-        width: 80px;
-        height: 80px;
-        background: white;
+    .upload-slot-premium.file-loaded {
+        border-color: #10b981;
+        background: #ecfdf5;
+    }
+
+    .slot-icon-wrapper {
+        width: 50px;
+        height: 50px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto;
-        font-size: 2rem;
-        color: #7c3aed;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        font-size: 1.25rem;
+    }
+
+    .upload-slot-premium.file-loaded .slot-icon-wrapper {
+        background: #d1fae5;
+        color: #10b981;
     }
 
     /* Stats Cards */
@@ -317,6 +440,7 @@
         font-weight: 800;
         background: var(--primary-gradient);
         -webkit-background-clip: text;
+        background-clip: text;
         -webkit-text-fill-color: transparent;
         letter-spacing: 2px;
     }
@@ -359,100 +483,384 @@
 
 <script>
     let lotteryData = [];
+    let uploadedFilesData = { 2: null, 3: null, 4: null, 5: null, 6: null };
 
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
+    // Tab switcher function
+    function switchTab(mode) {
+        const tabApiBtn = document.getElementById('tabApiBtn');
+        const tabUploadBtn = document.getElementById('tabUploadBtn');
+        const apiFetchSection = document.getElementById('apiFetchSection');
+        const fileUploadSection = document.getElementById('fileUploadSection');
 
-    // Drag & Drop
-    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-primary'); });
-    dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('border-primary'); });
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('border-primary');
-        handleFiles(e.dataTransfer.files);
-    });
-    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
-
-    function handleFiles(files) {
-        const file = files[0];
-        if (!file) return;
-
-        dropZone.innerHTML = `
-            <div class="spinner-border text-primary spinner-border-custom mb-3" role="status">
-                <span class="visually-hidden">กำลังโหลด...</span>
-            </div>
-            <h5 class="text-primary fw-bold">กำลังวิเคราะห์ข้อมูล...</h5>
-            <p id="progress-text" class="text-muted mt-2">0% ประมวลผลแล้ว</p>
-        `;
-        dropZone.onclick = null;
-
-        const roundMatch = file.name.match(/(\d{5})/);
-        if (roundMatch) {
-            document.getElementById('roundLabel').innerText = "งวดประจำวันที่: " + roundMatch[1];
+        if (mode === 'api') {
+            tabApiBtn.className = 'btn active-tab-btn rounded-pill px-4 py-2';
+            tabUploadBtn.className = 'btn text-secondary rounded-pill px-4 py-2';
+            apiFetchSection.style.display = 'block';
+            fileUploadSection.style.display = 'none';
+        } else {
+            tabApiBtn.className = 'btn text-secondary rounded-pill px-4 py-2';
+            tabUploadBtn.className = 'btn active-tab-btn rounded-pill px-4 py-2';
+            apiFetchSection.style.display = 'none';
+            fileUploadSection.style.display = 'block';
         }
-
-        const reader = new FileReader();
-        reader.onload = function (e) { processCSVChunked(e.target.result); }
-        reader.readAsText(file);
     }
 
-    function processCSVChunked(csvText) {
-        lotteryData = [];
-        let totalAmount = 0;
-        let recordCount = 0;
-        let cursor = 0;
-        const fileSize = csvText.length;
-        const batchSize = 10000;
+    // Sniffer code instructions
+    function showSnifferGuide() {
+        Swal.fire({
+            title: '💡 วิธีการดึงข้อมูลอัตโนมัติ',
+            html: `
+                <div class="text-start" style="font-size: 0.9rem;">
+                    <p class="mb-2">1. เข้าสู่ระบบของ <b>ช้างคำ</b> (<a href="http://128.199.212.93:5001" target="_blank">128.199.212.93:5001</a>)</p>
+                    <p class="mb-2">2. กดปุ่ม <b>F12</b> เพื่อเปิด Console ของเบราว์เซอร์</p>
+                    <p class="mb-2">3. คัดลอกและวางโค้ดด้านล่างนี้ลงใน Console แล้วกด Enter:</p>
+                    <textarea class="form-control mb-3 text-wrap font-monospace select-all" readonly style="font-size: 0.75rem; height: 120px; background: #f8fafc; cursor: pointer;" onclick="this.select()">(() => {
+    const originalFetch = window.fetch;
+    window.fetch = async function(...args) {
+        const [url, options] = args;
+        if (typeof url === 'string' && url.includes('api.xangkham.com')) {
+            let token = options?.headers?.get?.('Authorization') || options?.headers?.['Authorization'] || options?.headers?.['authorization'];
+            let roundNo = new URL(url, window.location.origin).searchParams.get("roundNo");
+            if (token && roundNo) {
+                const ledgerUrl = "http://localhost:4500/audit/check?token=" + encodeURIComponent(token) + "&roundNo=" + roundNo;
+                window.open(ledgerUrl, '_blank');
+                window.fetch = originalFetch;
+            }
+        }
+        return originalFetch.apply(this, args);
+    };
+    alert("🟢 ตัวเชื่อมต่อพร้อม! กรุณากดปุ่ม 'ค้นหา' ในหน้าเว็บเพื่อดึงข้อมูลทันที");
+})();</textarea>
+                    <p class="mb-0">4. กดปุ่ม <b>"ค้นหา"</b> ในเว็บช้างคำ ระบบจะเปิดหน้าจอนี้พร้อมดึงข้อมูลให้อัตโนมัติทันทีครับ!</p>
+                </div>
+            `,
+            confirmButtonColor: '#4f46e5'
+        });
+    }
 
-        function parseBatch() {
-            const startTime = performance.now();
-            while (cursor < fileSize) {
-                let nextNewline = csvText.indexOf('\n', cursor);
-                if (nextNewline === -1) nextNewline = fileSize;
-                const line = csvText.substring(cursor, nextNewline).trim();
-                cursor = nextNewline + 1;
+    // Direct fetch from backend proxy
+    async function fetchFromApiDirectly(customToken, customRoundNo) {
+        const token = customToken || document.getElementById('tokenInput').value.trim();
+        const roundNo = customRoundNo || document.getElementById('roundNoInput').value.trim();
 
-                if (line && line.charCodeAt(0) !== 239 && !line.startsWith("ประเภท") && !line.startsWith("Type")) {
-                    const parts = line.split(',');
-                    let number = null;
-                    let amount = 0;
+        if (!token) {
+            Swal.fire({ icon: 'warning', title: 'กรุณากรอก Token', text: 'คัดลอก Token จากระบบช้างคำมาใส่เพื่อดำเนินการดึงข้อมูล', confirmButtonColor: '#4f46e5' });
+            return;
+        }
+        if (!roundNo) {
+            Swal.fire({ icon: 'warning', title: 'กรุณากรอกเลขงวด', text: 'กรุณากรอกเลขงวดที่ต้องการตรวจสอบ', confirmButtonColor: '#4f46e5' });
+            return;
+        }
 
-                    if (parts.length >= 4) {
-                        number = parts[3].trim();
-                        amount = parseInt(parts[2].trim()) || 0;
-                    } else if (parts.length >= 2) {
-                        number = parts[0].trim();
-                        amount = parseInt(parts[1].trim()) || 0;
+        const uploadCard = document.getElementById('uploadCard');
+        const originalContent = uploadCard.innerHTML;
+        
+        uploadCard.innerHTML = `
+            <div class="card-body p-5 text-center">
+                <div class="spinner-border text-primary spinner-border-custom mb-3" role="status">
+                    <span class="visually-hidden">กำลังดึงข้อมูล...</span>
+                </div>
+                <h4 class="text-primary fw-bold">กำลังดึงข้อมูลจากช้างคำ API...</h4>
+                <p class="text-muted mt-2 mb-0">ระบบกำลังดึงข้อมูลและดึงทุกหน้าผ่าน backend เพื่อเลี่ยงปัญหา CORS</p>
+                <div class="progress mt-4 mx-auto" style="max-width: 400px; height: 10px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 100%"></div>
+                </div>
+            </div>
+        `;
+
+        try {
+            const response = await fetch('/audit/fetch-direct', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ token, roundNo })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'ดึงข้อมูลไม่สำเร็จ');
+            }
+
+            const data = await response.json();
+            if (data.items && data.items.length > 0) {
+                lotteryData = data.items;
+                document.getElementById('roundLabel').innerText = "งวดประจำวันที่: " + roundNo;
+                finishLoad(data.count, data.totalAmount);
+            } else {
+                throw new Error('ไม่พบข้อมูลหวยในงวดนี้เลย (0 รายการ)');
+            }
+
+        } catch (e) {
+            // Restore UI
+            uploadCard.innerHTML = originalContent;
+            switchTab('api');
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาด',
+                text: e.message || 'โปรดตรวจสอบสิทธิ์การใช้งาน (Token) อีกครั้ง',
+                confirmButtonColor: '#4f46e5'
+            });
+        }
+    }
+
+    // Setup Drag and drop for each slot
+    document.addEventListener('DOMContentLoaded', () => {
+        [2, 3, 4, 5, 6].forEach(digit => {
+            const zone = document.getElementById(`dropZone${digit}`);
+            if (!zone) return;
+            
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('active-drag');
+            });
+            
+            zone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                zone.classList.remove('active-drag');
+            });
+            
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('active-drag');
+                handleSlotFile(digit, e.dataTransfer.files);
+            });
+        });
+    });
+
+    // Helper to parse file
+    function parseFileToItems(file, digit) {
+        return new Promise((resolve, reject) => {
+            const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+            if (isExcel) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const csvText = XLSX.utils.sheet_to_csv(worksheet);
+                        const items = parseCSVTextToItems(csvText, digit);
+                        resolve(items);
+                    } catch (err) {
+                        reject(err);
                     }
-
-                    if (number) {
-                        lotteryData.push({ number, amount });
-                        totalAmount += amount;
-                        recordCount++;
+                };
+                reader.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์ได้'));
+                reader.readAsArrayBuffer(file);
+            } else {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const items = parseCSVTextToItems(e.target.result, digit);
+                        resolve(items);
+                    } catch (err) {
+                        reject(err);
                     }
+                };
+                reader.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์ได้'));
+                reader.readAsText(file);
+            }
+        });
+    }
+
+    // Helper to detect column step size dynamically from headers
+    function detectStepSize(headerParts) {
+        const numKeywords = ["no", "number", "n", "หมายเลข", "เลขดิบ", "เลข"];
+        
+        let firstNumIdx = -1;
+        for (let i = 0; i < headerParts.length; i++) {
+            const val = String(headerParts[i]).toLowerCase().trim();
+            if (numKeywords.some(kw => val.includes(kw) || val === kw)) {
+                firstNumIdx = i;
+                break;
+            }
+        }
+        
+        if (firstNumIdx === -1) firstNumIdx = 0;
+        
+        let secondNumIdx = -1;
+        for (let i = firstNumIdx + 1; i < headerParts.length; i++) {
+            const val = String(headerParts[i]).toLowerCase().trim();
+            if (numKeywords.some(kw => val.includes(kw) || val === kw)) {
+                secondNumIdx = i;
+                break;
+            }
+        }
+        
+        if (secondNumIdx !== -1) {
+            return secondNumIdx - firstNumIdx;
+        }
+        
+        return headerParts.length >= 3 ? 3 : 2; 
+    }
+
+    // Process parsed CSV string into rows supporting horizontally repeating columns
+    function parseCSVTextToItems(csvText, digit) {
+        const items = [];
+        const lines = csvText.split('\n');
+        if (lines.length === 0) return items;
+        
+        // Find the header line
+        let headerLine = "";
+        let headerLineIdx = -1;
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line && (line.includes("ประเภท") || line.includes("Type") || line.includes("No") || line.includes("หมายเลข"))) {
+                headerLine = line;
+                headerLineIdx = i;
+                break;
+            }
+        }
+        
+        // Fallback to first non-empty line
+        if (headerLineIdx === -1) {
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].trim()) {
+                    headerLine = lines[i].trim();
+                    headerLineIdx = i;
+                    break;
                 }
-
-                if (recordCount % batchSize === 0) {
-                    if (performance.now() - startTime > 15) {
-                        const progress = Math.min(99, Math.round((cursor / fileSize) * 100));
-                        const textEl = document.getElementById('progress-text');
-                        if (textEl) textEl.innerText = `${progress}% ประมวลผลแล้ว`;
-                        setTimeout(parseBatch, 0);
-                        return;
+            }
+        }
+        
+        if (headerLineIdx === -1) return items;
+        
+        const headerParts = headerLine.split(',');
+        const stepSize = detectStepSize(headerParts);
+        
+        // Parse data rows
+        for (let i = headerLineIdx + 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line || line.charCodeAt(0) === 239) continue;
+            
+            const parts = line.split(',');
+            
+            for (let c = 0; c < parts.length; c += stepSize) {
+                let number = parts[c];
+                let amount = parts[c + 1];
+                
+                if (number && amount) {
+                    number = number.replace(/[="']/g, '').trim();
+                    const parsedAmount = parseInt(amount.trim()) || 0;
+                    
+                    if (number && parsedAmount > 0) {
+                        let paddedNum = number;
+                        while (paddedNum.length < digit) paddedNum = "0" + paddedNum;
+                        items.push({ number: paddedNum, amount: parsedAmount });
                     }
                 }
             }
-            finishLoad(recordCount, totalAmount);
         }
-        parseBatch();
+        return items;
+    }
+
+    // Handle single slot upload
+    async function handleSlotFile(digit, files) {
+        const file = files[0];
+        if (!file) return;
+
+        const label = document.getElementById(`label${digit}`);
+        const zone = document.getElementById(`dropZone${digit}`);
+
+        label.innerText = "กำลังวิเคราะห์ไฟล์...";
+        label.className = "text-primary small mb-0 text-truncate px-2";
+
+        try {
+            const items = await parseFileToItems(file, digit);
+            if (items.length === 0) {
+                throw new Error('ไม่พบข้อมูลรายการสลากในไฟล์');
+            }
+
+            uploadedFilesData[digit] = {
+                fileName: file.name,
+                items: items,
+                amount: items.reduce((sum, item) => sum + item.amount, 0)
+            };
+
+            zone.classList.add('file-loaded');
+            label.innerText = `${file.name.substring(0, 15)}... (${items.length.toLocaleString()} รายการ)`;
+            label.className = "text-success small mb-0 text-truncate px-2 fw-semibold";
+            
+            const roundMatch = file.name.match(/(\d{5})/);
+            if (roundMatch) {
+                document.getElementById('roundLabel').innerText = "งวดประจำวันที่: " + roundMatch[1];
+            }
+
+            updateProcessButton();
+            
+        } catch (err) {
+            zone.classList.remove('file-loaded');
+            label.innerText = "เกิดข้อผิดพลาด: " + err.message;
+            label.className = "text-danger small mb-0 text-truncate px-2";
+            uploadedFilesData[digit] = null;
+            updateProcessButton();
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'วิเคราะห์ไฟล์ไม่สำเร็จ',
+                text: err.message,
+                confirmButtonColor: '#4f46e5'
+            });
+        }
+    }
+
+    // Update process button status
+    function updateProcessButton() {
+        let activeSlots = 0;
+        for (const key in uploadedFilesData) {
+            if (uploadedFilesData[key] !== null) activeSlots++;
+        }
+
+        document.getElementById('selectedCount').innerText = activeSlots;
+        const btn = document.getElementById('btnProcessUploadedFiles');
+        if (activeSlots > 0) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-50');
+        } else {
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+        }
+    }
+
+    // Combine all slot items
+    function processAllUploadedSlots() {
+        lotteryData = [];
+        let totalAmount = 0;
+        let recordCount = 0;
+
+        for (const digit in uploadedFilesData) {
+            const data = uploadedFilesData[digit];
+            if (data) {
+                lotteryData = lotteryData.concat(data.items);
+                totalAmount += data.amount;
+                recordCount += data.items.length;
+            }
+        }
+
+        if (lotteryData.length > 0) {
+            finishLoad(recordCount, totalAmount);
+        } else {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ไม่มีข้อมูลไฟล์',
+                text: 'กรุณาเลือกไฟล์อย่างน้อย 1 ไฟล์ก่อนประมวลผล',
+                confirmButtonColor: '#4f46e5'
+            });
+        }
     }
 
     function finishLoad(count, amount) {
-        // Smooth transition
         const uploadCard = document.getElementById('uploadCard');
         uploadCard.style.opacity = '0';
         setTimeout(() => {
             uploadCard.parentElement.parentElement.style.display = 'none';
+            // Also hide tab switcher
+            const tabSwitcher = document.querySelector('.btn-group').parentElement;
+            if (tabSwitcher) tabSwitcher.style.display = 'none';
+            
             fadeIn(document.getElementById('dashboard'));
             fadeIn(document.getElementById('controlPanel'));
             fadeIn(document.getElementById('auditSection'));
@@ -462,9 +870,10 @@
         document.getElementById('totalAmount').innerText = amount.toLocaleString();
     }
 
+    // Common fade-in helper
     function fadeIn(element) {
         element.style.opacity = 0;
-        element.style.display = 'flex'; // or whatever display type it was (row/flex)
+        element.style.display = 'flex';
         if (element.id === 'dashboard') element.classList.add('row');
 
         let opacity = 0;
@@ -498,7 +907,6 @@
         htmlContent += calculateAnagramPromo(winNum);
         resultArea.innerHTML = htmlContent;
 
-        // Scroll to results
         resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
@@ -683,5 +1091,21 @@
 
     document.getElementById('searchInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') checkNumber();
+    });
+
+    // Check for tokens/roundNo on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const roundNo = urlParams.get('roundNo');
+
+        if (token && roundNo) {
+            document.getElementById('tokenInput').value = token;
+            document.getElementById('roundNoInput').value = roundNo;
+            document.getElementById('roundLabel').innerText = "งวดประจำวันที่: " + roundNo;
+            
+            // Auto trigger fetch
+            fetchFromApiDirectly(token, roundNo);
+        }
     });
 </script>

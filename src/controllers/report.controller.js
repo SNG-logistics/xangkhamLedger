@@ -86,6 +86,8 @@ const reportController = {
             let totalPrizesLak = 0; // Add prizes tracking
             let totalExpensesLak = 0, totalExpensesThb = 0;
             let totalProfitThrowing = 0; // Add profit throwing tracking
+            let totalInjectionLak = 0;
+            let totalReturnLak = 0;
 
             // Calculate Expense Summary by Category
             const expenseSummary = {
@@ -129,11 +131,20 @@ const reportController = {
                     }
                 });
 
+                let periodInjection = 0;
+                let periodReturn = 0;
                 if (summary) {
                     totalSalesThb += parseFloat(summary.sales_thb || 0);
+                    periodInjection = parseFloat(summary.capital_injection || 0);
+                    periodReturn = parseFloat(summary.capital_return || 0);
                 }
 
                 totalExpensesThb += parseFloat(expenseTotal.total_thb || 0);
+
+                period.injectionLak = periodInjection;
+                period.returnLak = periodReturn;
+                totalInjectionLak += periodInjection;
+                totalReturnLak += periodReturn;
             }
 
             // Calculate parent category "2. รวมโปรโมชั่น"
@@ -151,6 +162,8 @@ const reportController = {
                 expensesLak: totalExpensesLak,
                 expensesThb: totalExpensesThb,
                 profitThrowing: totalProfitThrowing,
+                injectionLak: totalInjectionLak,
+                returnLak: totalReturnLak,
                 // Net Profit = Sales - Prizes + Throwing - Expenses
                 netLak: totalSalesLak - totalPrizesLak + totalProfitThrowing - totalExpensesLak,
                 netThb: totalSalesThb - totalExpensesThb

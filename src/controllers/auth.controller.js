@@ -31,7 +31,9 @@ const authController = {
 
             await audit.log(user.id, 'LOGIN', 'users', user.id, null, null, null, req.ip, req.get('User-Agent'));
 
-            res.redirect('/dashboard');
+            const redirectTo = req.session.redirectTo || '/dashboard';
+            delete req.session.redirectTo;
+            res.redirect(redirectTo);
         } catch (error) {
             console.error('Login error:', error);
             res.render('login', { error: 'An error occurred' });

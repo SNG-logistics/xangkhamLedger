@@ -18,8 +18,17 @@ const auth = {
     },
 
     requireAdmin: (req, res, next) => {
+        // If not logged in, redirect to login page
+        if (!req.session || !req.session.userId) {
+            if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('json') > -1)) {
+                return res.status(401).json({ error: 'Unauthorized: Please login first' });
+            }
+            req.session.redirectTo = req.originalUrl;
+            return res.redirect('/login');
+        }
+
         const allowedRoles = ['SUPER_ADMIN', 'ADMIN', 'CEO'];
-        if (req.session && req.session.userId && allowedRoles.includes(req.session.role)) {
+        if (allowedRoles.includes(req.session.role)) {
             return next();
         }
         console.log(`[AUTH] Access Denied for User: ${req.session.username}, Role: ${req.session.role}, Required: ${allowedRoles.join(',')}`);

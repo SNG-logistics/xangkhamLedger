@@ -530,16 +530,17 @@ const periodController = {
             // expenses to be invisible during re-check (they lived in a pool that wasn't searched).
             const systemAmountPool = expenses.map(exp => ({
                 amount: parseFloat(exp.amount_lak) || 0,
-                category: exp.category || 'Unknown',
+                category: (exp.description && exp.description.trim() !== '') ? exp.description : (exp.category || 'Unknown'),
+                sysCat: exp.category || 'Unknown',
                 used: false
             }));
 
             // Promotion total is still calculated for the summary section at the bottom
             const systemPromotions = systemAmountPool
-                .filter(e => e.category.toUpperCase().includes('PROMOTION') ||
-                             e.category.includes('โปรโมชั่น') ||
-                             e.category.includes('โปรโมชัน') ||
-                             e.category.includes('โปร'))
+                .filter(e => e.sysCat.toUpperCase().includes('PROMOTION') ||
+                             e.sysCat.includes('โปรโมชั่น') ||
+                             e.sysCat.includes('โปรโมชัน') ||
+                             e.sysCat.includes('โปร'))
                 .reduce((sum, e) => sum + e.amount, 0);
 
             const missingInSystem = [];
@@ -712,11 +713,12 @@ const periodController = {
             หน้าที่ของคุณ:
             ดึงเฉพาะตัวเลข "ยอดโปรโมชั่น" ข้ามยอดธนาคาร (เช่น BCEL-ONE, LDB, JDB ห้ามนำมาเด็ดขาด)
             ตัวอย่างรายการโปรโมชั่นที่ต้องดึง: โปรนามสัตว์, โปรรอบทิศ, โปรเลขสลับ, โปรเลขข้างเคียง, โปรเลขหน้า, โปรเลขท้าย
+            กฎ: ถ้ารายการไหนมีคำว่า "(เพิ่มเติม)" หรือระบุว่าเป็นงวดวันอื่น ให้ใส่ cross_day: true
             
             ตอบกลับเป็น JSON array ของ items อย่างเดียว ห้ามมีข้อความอื่น:
             {
               "items": [
-                {"category": "ชื่อโปรโมชั่น", "amount_lak": 1200000}
+                {"category": "ชื่อโปรโมชั่น", "amount_lak": 1200000, "cross_day": false}
               ]
             }
             `;
@@ -790,6 +792,13 @@ const periodController = {
                 const cat = item.category || 'Unknown';
                 const amount = parseFloat(item.amount_lak) || 0;
                 
+                // Cross-day / เพิ่มเติม
+                const isCrossDay = item.cross_day === true || cat.includes('เพิ่มเติม');
+                if (isCrossDay) {
+                    matched.push({ category: '✅ ' + cat + ' (ลงสำเร็จในงวดก่อนแล้ว)', amount: amount, system_desc: 'รายการเพิ่มเติม/ข้ามวัน' });
+                    return;
+                }
+
                 // Match by exact amount first, then by keyword if amount match fails
                 const matchIdx = systemPromos.findIndex(
                     e => !e.used && Math.abs(e.amount - amount) <= 1
