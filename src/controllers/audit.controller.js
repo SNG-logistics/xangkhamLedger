@@ -1,6 +1,5 @@
 // FILE: src/controllers/audit.controller.js
 const Audit = require('../models/audit.model');
-const axios = require('axios');
 
 const auditController = {
     logs: async (req, res) => {
@@ -79,8 +78,12 @@ const auditController = {
             const firstPagePromises = digits.map(async (digit) => {
                 const url = `https://api.xangkham.com/report/huaydigithome?roundNo=${roundNo}&digit=${digit}&page=1&perpage=${pageSize}&xangkham=1`;
                 try {
-                    const response = await axios.get(url, { headers, timeout: 15000 });
-                    const { items, total } = parseResponse(response.data);
+                    const response = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    const data = await response.json();
+                    const { items, total } = parseResponse(data);
                     items.forEach(item => item._digitType = digit);
                     return { digit, items, total };
                 } catch (error) {
@@ -102,9 +105,13 @@ const auditController = {
                     for (let p = 2; p <= totalPages; p++) {
                         const url = `https://api.xangkham.com/report/huaydigithome?roundNo=${roundNo}&digit=${result.digit}&page=${p}&perpage=${pageSize}&xangkham=1`;
                         remainingPagePromises.push(
-                            axios.get(url, { headers, timeout: 15000 })
-                                .then(response => {
-                                    const { items } = parseResponse(response.data);
+                            fetch(url, { headers, signal: AbortSignal.timeout(15000) })
+                                .then(async response => {
+                                    if (!response.ok) {
+                                        throw new Error(`HTTP ${response.status}`);
+                                    }
+                                    const data = await response.json();
+                                    const { items } = parseResponse(data);
                                     items.forEach(item => item._digitType = result.digit);
                                     return items;
                                 })
