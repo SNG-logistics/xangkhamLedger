@@ -1,10 +1,35 @@
 // FILE: src/server.js
+const fs = require('fs');
+const path = require('path');
+
+// Global crash logger
+process.on('uncaughtException', (err) => {
+    const logMessage = `[${new Date().toISOString()}] UNCAUGHT EXCEPTION:\n${err.stack || err}\n\n`;
+    try {
+        fs.appendFileSync(path.join(__dirname, '../crash.log'), logMessage);
+    } catch (e) {
+        console.error('Failed to write uncaughtException to crash.log:', e);
+    }
+    console.error(err);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    const logMessage = `[${new Date().toISOString()}] UNHANDLED REJECTION:\n${reason.stack || reason}\n\n`;
+    try {
+        fs.appendFileSync(path.join(__dirname, '../crash.log'), logMessage);
+    } catch (e) {
+        console.error('Failed to write unhandledRejection to crash.log:', e);
+    }
+    console.error(reason);
+    process.exit(1);
+});
+
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const fileUpload = require('express-fileupload');
-const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
